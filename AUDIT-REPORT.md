@@ -4,7 +4,7 @@
 **Repositório efetivamente acessado:** `brunoalexdossantos10/marcenaria_3d`  
 **Branch de trabalho:** `audit/camera-sync-2026-10-09`  
 **Branch de produção preservada:** `main`  
-**HEAD remoto da branch:** `692b2851a5d98d0a0a2be55207d8acea64c81cb2`
+**HEAD remoto da branch:** `e1600ec0714f2f05abe24fb611a7f2aa7444f528`
 
 ## 1. Escopo e procedimento
 
@@ -124,5 +124,6 @@ Commits da branch:
 1. `e4fbe7f chore: materialize configurator source for audit`
 2. `064bbfd fix: sync category models and camera previews`
 3. `692b285 test: cover rack identity and dimension updates`
+4. `e1600ec docs: add camera sync audit report`
 
-A branch `audit/camera-sync-2026-10-09` foi enviada ao GitHub e está sincronizada com o commit `692b285`. A `main` não foi alterada e não há pull request aberto. O código está pronto para revisão/PR, mas **não deve ser considerado pronto para publicação em produção** até executar os testes físicos e tratar os riscos explicitados acima.
+A branch `audit/camera-sync-2026-10-09` foi enviada ao GitHub e está sincronizada com o commit `e1600ec`. A `main` não foi alterada e não há pull request aberto. O código está pronto para revisão/PR, mas **não deve ser considerado pronto para publicação em produção** até executar os testes físicos e tratar os riscos explicitados acima.
