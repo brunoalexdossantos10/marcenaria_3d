@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as THREE from "three";
 import { buildFurniture, normalizeConfig } from "../src/lib/furniture/builder.ts";
 import { FURNITURE_TYPES } from "../src/lib/furniture/types.ts";
 import { computePrice, computeScenePrice } from "../src/lib/furniture/pricing.ts";
@@ -202,12 +203,20 @@ test("desk and TV panel use category-specific geometry instead of wardrobe carca
 test("camera scene is rebuilt from the active config and changes furniture identity", () => {
   const wardrobe = normalizeConfig({ type: "guarda-roupa" });
   const desk = normalizeConfig({ type: "mesa", width: 180, height: 75, depth: 70 });
+  const rack = normalizeConfig({ type: "rack" });
   const wardrobeScene = createFurnitureScene(wardrobe);
   const deskScene = createFurnitureScene(desk);
+  const rackScene = createFurnitureScene(rack);
   assert.ok(wardrobeScene.children.some((child) => child.name === "Lateral esquerda"));
   assert.ok(deskScene.children.some((child) => child.name === "Tampo da mesa"));
   assert.ok(!deskScene.children.some((child) => child.name === "Lateral esquerda"));
   assert.ok(deskScene.children.some((child) => child.name === "Perna esquerda"));
+  const rackSize = new THREE.Box3().setFromObject(rackScene).getSize(new THREE.Vector3());
+  assert.ok(rackSize.y < 1, "rack must remain a low piece in the camera scene");
+  const tallerDesk = createFurnitureScene(normalizeConfig({ ...desk, height: 100 }));
+  const deskSize = new THREE.Box3().setFromObject(deskScene).getSize(new THREE.Vector3());
+  const tallerDeskSize = new THREE.Box3().setFromObject(tallerDesk).getSize(new THREE.Vector3());
+  assert.ok(tallerDeskSize.y > deskSize.y, "dimension changes must rebuild the camera model");
 });
 
 test("specific families keep editable counters and modular components", () => {
