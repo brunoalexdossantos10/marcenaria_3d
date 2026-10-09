@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject, RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Environment,
@@ -215,6 +216,74 @@ function Hanger({ size }: { size: [number, number, number] }) {
   );
 }
 
+function PartMotion({
+  group,
+  part,
+  manual,
+  drag,
+  openDoors,
+  isSwing,
+  isTilt,
+  isSliding,
+  isDrawer,
+  invalidate,
+}: {
+  group: RefObject<THREE.Group | null>;
+  part: Part;
+  manual: MutableRefObject<number | null>;
+  drag: MutableRefObject<{
+    x: number;
+    y: number;
+    from: number;
+    offset: [number, number, number];
+    moved: boolean;
+  } | null>;
+  openDoors: boolean;
+  isSwing: boolean;
+  isTilt: boolean;
+  isSliding: boolean;
+  isDrawer: boolean;
+  invalidate: () => void;
+}) {
+  useFrame((_, delta) => {
+    const target = group.current;
+    if (!target) return;
+    const goal = manual.current ?? (openDoors ? 1 : 0);
+    const k = drag.current ? 1 : 1 - Math.exp(-8 * Math.min(delta, 0.05));
+    if (isSwing) {
+      if (isTilt) {
+        const open = ((part.openLimit ?? 85) * Math.PI) / 180;
+        target.rotation.x += (-goal * open - target.rotation.x) * k;
+      } else {
+        const open = ((part.openLimit ?? 100) * Math.PI) / 180;
+        const rotation = goal * (part.hinge === 1 ? open : -open);
+        target.rotation.y += (rotation - target.rotation.y) * k;
+      }
+    } else if (isSliding) {
+      const offset = goal * (((part.slideTo ?? part.pos[0]) - part.pos[0]) * S);
+      target.position.x += (offset - target.position.x) * k;
+    } else if (isDrawer) {
+      const offset = goal * ((part.travel ?? part.size[2] * 0.85) * S);
+      target.position.z += (offset - target.position.z) * k;
+    }
+    const settled = isTilt
+      ? Math.abs(target.rotation.x + (goal * ((part.openLimit ?? 85) * Math.PI)) / 180) <= 0.001
+      : isSwing
+        ? Math.abs(
+            target.rotation.y -
+              (goal * (part.hinge === 1 ? 1 : -1) * ((part.openLimit ?? 100) * Math.PI)) / 180,
+          ) <= 0.001
+        : isSliding
+          ? Math.abs(
+              target.position.x - goal * (((part.slideTo ?? part.pos[0]) - part.pos[0]) * S),
+            ) <= 0.001
+          : Math.abs(target.position.z - goal * ((part.travel ?? part.size[2] * 0.85) * S)) <=
+            0.001;
+    if (!settled) invalidate();
+  });
+  return null;
+}
+
 function PartMesh({
   part,
   children,
@@ -359,6 +428,14 @@ function PartMesh({
       const hit = new THREE.Vector3();
       let moved = false;
       let last = config.componentOffsets?.[part.id] ?? [0, 0, 0];
+      let moveFrame = 0;
+      let pendingOffset: [number, number, number] | null = null;
+      const flushOffset = () => {
+        moveFrame = 0;
+        if (!pendingOffset) return;
+        onComponentMove(part.id, pendingOffset);
+        pendingOffset = null;
+      };
       if (orbit) orbit.enabled = false;
       const move = (ev: PointerEvent) => {
         if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 4) return;
@@ -381,10 +458,13 @@ function PartMesh({
         ]);
         const home = part.homePos ?? part.pos;
         last = [next[0] - home[0], next[1] - home[1], 0];
-        onComponentMove(part.id, last);
+        pendingOffset = last;
+        if (!moveFrame) moveFrame = requestAnimationFrame(flushOffset);
         invalidate();
       };
       const up = () => {
+        if (moveFrame) cancelAnimationFrame(moveFrame);
+        flushOffset();
         if (moved) {
           const home = part.homePos ?? part.pos;
           const snapped = constrainPosition(config, allParts, part, [
@@ -415,6 +495,14 @@ function PartMesh({
       offset: accessoryOffset,
       moved: false,
     };
+    let moveFrame = 0;
+    let pendingOffset: [number, number, number] | null = null;
+    const flushOffset = () => {
+      moveFrame = 0;
+      if (!pendingOffset) return;
+      onAccessoryMove(part.id, pendingOffset);
+      pendingOffset = null;
+    };
     if (orbit) orbit.enabled = false;
     const move = (ev: PointerEvent) => {
       const d = drag.current;
@@ -425,7 +513,8 @@ function PartMesh({
       d.moved = true;
       setGrabbing(true);
       if (part.kind === "acessorio") {
-        onAccessoryMove(part.id, [d.offset[0] + dx * 0.28, d.offset[1] - dy * 0.28, d.offset[2]]);
+        pendingOffset = [d.offset[0] + dx * 0.28, d.offset[1] - dy * 0.28, d.offset[2]];
+        if (!moveFrame) moveFrame = requestAnimationFrame(flushOffset);
         return;
       }
       let v = d.from;
@@ -436,6 +525,8 @@ function PartMesh({
       invalidate();
     };
     const up = () => {
+      if (moveFrame) cancelAnimationFrame(moveFrame);
+      flushOffset();
       drag.current = null;
       setGrabbing(false);
       if (orbit) orbit.enabled = true;
@@ -447,47 +538,6 @@ function PartMesh({
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
   };
-
-  useFrame((_, delta) => {
-    const g = group.current;
-    if (!g || !interactive) return;
-    const goal = manual.current ?? (openDoors ? 1 : 0);
-    const k = drag.current ? 1 : 1 - Math.exp(-8 * Math.min(delta, 0.05));
-    if (isSwing) {
-      if (isTilt) {
-        // basculante: rotates up around the top edge, limited by openLimit
-        const OPEN = ((part.openLimit ?? 85) * Math.PI) / 180;
-        g.rotation.x += (-goal * OPEN - g.rotation.x) * k;
-      } else {
-        // hinge on the left (-1) swings the free edge forward with a NEGATIVE
-        // y rotation; hinge on the right (1) with a positive one.
-        const OPEN = ((part.openLimit ?? 100) * Math.PI) / 180;
-        const rot = goal * (part.hinge === 1 ? OPEN : -OPEN);
-        g.rotation.y += (rot - g.rotation.y) * k;
-      }
-    } else if (isSliding) {
-      const dx = goal * (((part.slideTo ?? part.pos[0]) - part.pos[0]) * S);
-      g.position.x += (dx - g.position.x) * k;
-    } else if (isDrawer) {
-      // never leaves the runners: travel is capped by the builder
-      const out = goal * ((part.travel ?? part.size[2] * 0.85) * S);
-      g.position.z += (out - g.position.z) * k;
-    }
-    if (
-      isTilt
-        ? Math.abs(g.rotation.x + (goal * ((part.openLimit ?? 85) * Math.PI)) / 180) > 0.001
-        : isSwing
-          ? Math.abs(
-              g.rotation.y -
-                (goal * (part.hinge === 1 ? 1 : -1) * ((part.openLimit ?? 100) * Math.PI)) / 180,
-            ) > 0.001
-          : isSliding
-            ? Math.abs(g.position.x - goal * (((part.slideTo ?? part.pos[0]) - part.pos[0]) * S)) >
-              0.001
-            : Math.abs(g.position.z - goal * ((part.travel ?? part.size[2] * 0.85) * S)) > 0.001
-    )
-      invalidate();
-  });
 
   const emphasis = selected || hover;
   useEffect(() => {
@@ -686,7 +736,7 @@ function PartMesh({
   );
 
   const mounted = children?.map((child) => (
-    <PartMesh
+    <MemoizedPartMesh
       key={child.id}
       part={child}
       materialId={materialId}
@@ -734,6 +784,18 @@ function PartMesh({
   if (isSwing && isTilt) {
     return (
       <group position={[x, y + h / 2, z - d / 2]} ref={group}>
+        <PartMotion
+          group={group}
+          part={part}
+          manual={manual}
+          drag={drag}
+          openDoors={openDoors}
+          isSwing={isSwing}
+          isTilt={isTilt}
+          isSliding={isSliding}
+          isDrawer={isDrawer}
+          invalidate={invalidate}
+        />
         <group position={[0, -h / 2, d / 2]}>
           {mesh}
           {reflectiveFace}
@@ -749,6 +811,18 @@ function PartMesh({
     // sweeps in front of the carcass and never crosses it.
     return (
       <group position={[hingeX, y, z - d / 2]} ref={group}>
+        <PartMotion
+          group={group}
+          part={part}
+          manual={manual}
+          drag={drag}
+          openDoors={openDoors}
+          isSwing={isSwing}
+          isTilt={isTilt}
+          isSliding={isSliding}
+          isDrawer={isDrawer}
+          invalidate={invalidate}
+        />
         <group position={[part.hinge === 1 ? -w / 2 : w / 2, 0, d / 2]}>
           {mesh}
           {reflectiveFace}
@@ -762,6 +836,18 @@ function PartMesh({
     return (
       <group position={[x, y, z]}>
         <group ref={group}>
+          <PartMotion
+            group={group}
+            part={part}
+            manual={manual}
+            drag={drag}
+            openDoors={openDoors}
+            isSwing={isSwing}
+            isTilt={isTilt}
+            isSliding={isSliding}
+            isDrawer={isDrawer}
+            invalidate={invalidate}
+          />
           {mesh}
           {reflectiveFace}
           {mounted}
@@ -775,6 +861,18 @@ function PartMesh({
     return (
       <group position={[x, y, z]}>
         <group ref={group}>
+          <PartMotion
+            group={group}
+            part={part}
+            manual={manual}
+            drag={drag}
+            openDoors={openDoors}
+            isSwing={isSwing}
+            isTilt={isTilt}
+            isSliding={isSliding}
+            isDrawer={isDrawer}
+            invalidate={invalidate}
+          />
           {mesh}
           {mounted}
           <group position={[0, -h * 0.24, -bodyDepth / 2 - d / 2]}>
@@ -802,6 +900,25 @@ function PartMesh({
     </group>
   );
 }
+
+const MemoizedPartMesh = memo(
+  PartMesh,
+  (previous, next) =>
+    previous.part === next.part &&
+    previous.children === next.children &&
+    previous.config === next.config &&
+    previous.allParts === next.allParts &&
+    previous.materialId === next.materialId &&
+    previous.selected === next.selected &&
+    previous.selectedPart === next.selectedPart &&
+    previous.openDoors === next.openDoors &&
+    previous.lightweight === next.lightweight &&
+    previous.readOnly === next.readOnly &&
+    previous.furnitureId === next.furnitureId &&
+    previous.accessoryOffset[0] === next.accessoryOffset[0] &&
+    previous.accessoryOffset[1] === next.accessoryOffset[1] &&
+    previous.accessoryOffset[2] === next.accessoryOffset[2],
+);
 
 function Dimensions({ cfg }: { cfg: FurnitureConfig }) {
   const w = cfg.width * S;
@@ -1212,7 +1329,7 @@ export function Scene({
           {parts
             .filter((p) => !p.parent)
             .map((p) => (
-              <PartMesh
+              <MemoizedPartMesh
                 key={p.id}
                 part={p}
                 children={childrenByParent.get(p.id)}
@@ -1256,7 +1373,7 @@ export function Scene({
             rotation={[0, ((item.config.floorRotation ?? 0) * Math.PI) / 180, 0]}
           >
             {roots.map((part) => (
-              <PartMesh
+              <MemoizedPartMesh
                 key={part.id}
                 part={part}
                 children={children.get(part.id)}
