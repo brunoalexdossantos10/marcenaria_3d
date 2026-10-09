@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { lazy, Suspense, useState, useRef, useCallback } from "react";
+import { Component, lazy, Suspense, useState, useRef, useCallback } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { ArrowLeft, RotateCcw, SlidersHorizontal, Share2, Download, ScanLine } from "lucide-react";
 import {
   useConfigurator,
@@ -29,6 +30,38 @@ import EnvironmentPicker from "@/components/configurator/environments/Environmen
 import type { EnvironmentChoice } from "@/components/configurator/environments/types";
 
 const Scene = lazy(() => import("@/components/configurator/Scene"));
+
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  override state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Falha ao inicializar o modelador 3D", error, info.componentStack);
+  }
+
+  override render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+        <p className="text-lg font-semibold">Não foi possível iniciar o ambiente 3D</p>
+        <p className="max-w-md text-sm text-muted-foreground">
+          O restante do configurador continua disponível. Verifique a aceleração gráfica e tente
+          carregar a cena novamente.
+        </p>
+        <button type="button" className="btn-primary" onClick={() => window.location.reload()}>
+          Tentar novamente
+        </button>
+        <details className="max-w-md text-left text-xs text-muted-foreground">
+          <summary className="cursor-pointer">Detalhes técnicos</summary>
+          <p className="mt-1 break-words">{this.state.error.message || this.state.error.name}</p>
+        </details>
+      </div>
+    );
+  }
+}
 
 const VIEWS: { key: CameraView; label: string }[] = [
   { key: "frente", label: "Frente" },
@@ -95,7 +128,7 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
     if (typeof document === "undefined") return false;
     try {
       const canvas = document.createElement("canvas");
-      const context = canvas.getContext("webgl2");
+      const context = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
       const available = Boolean(context);
       context?.getExtension("WEBGL_lose_context")?.loseContext();
       return available;
@@ -282,33 +315,35 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
             Visualização no ambiente aberta
           </div>
         ) : webglAvailable ? (
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Preparando o ambiente 3D…
-              </div>
-            }
-          >
-            <Scene
-              parts={c.parts}
-              config={c.config}
-              selected={c.selected}
-              onSelect={c.setSelected}
-              onAccessoryMove={c.moveAccessory}
-              onComponentMove={c.moveComponent}
-              onAddNiche={addNiche}
-              onAddComponent={addComponent}
-              onSelectFurniture={c.selectFurniture}
-              onResize={(axis, value) => c.set(axis, value)}
-              positioning={positioning}
-              placementMode={placementMode}
-              sensitivity={sensitivity}
-              onPlace={place}
-              view={view}
-              environment={environment}
-              onCaptureReady={registerCapture}
-            />
-          </Suspense>
+          <SceneErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Preparando o ambiente 3D…
+                </div>
+              }
+            >
+              <Scene
+                parts={c.parts}
+                config={c.config}
+                selected={c.selected}
+                onSelect={c.setSelected}
+                onAccessoryMove={c.moveAccessory}
+                onComponentMove={c.moveComponent}
+                onAddNiche={addNiche}
+                onAddComponent={addComponent}
+                onSelectFurniture={c.selectFurniture}
+                onResize={(axis, value) => c.set(axis, value)}
+                positioning={positioning}
+                placementMode={placementMode}
+                sensitivity={sensitivity}
+                onPlace={place}
+                view={view}
+                environment={environment}
+                onCaptureReady={registerCapture}
+              />
+            </Suspense>
+          </SceneErrorBoundary>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
             <p className="text-lg font-semibold">Prévia 3D indisponível neste navegador</p>
