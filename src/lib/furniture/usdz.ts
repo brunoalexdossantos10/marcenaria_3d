@@ -1,11 +1,13 @@
 import * as THREE from "three";
+import { buildFurniture } from "./builder";
 import type { FurnitureConfig, Part } from "./types";
 import { material as materialDef } from "./materials";
 
 const metre = 0.01;
 
-/** The same physical scene is used for Android WebXR and the iPhone USDZ export. */
-export function createFurnitureScene(parts: Part[], config: FurnitureConfig): THREE.Scene {
+/** The same configuration-derived physical scene is used by camera, WebXR and USDZ. */
+export function createFurnitureScene(config: FurnitureConfig): THREE.Scene {
+  const parts = buildFurniture(config);
   const scene = new THREE.Scene();
   const byParent = new Map<string, Part[]>();
   for (const part of parts) {
@@ -115,11 +117,10 @@ export function createFurnitureScene(parts: Part[], config: FurnitureConfig): TH
 
 /** Quick Look expects geometry in metres with its base on the horizontal plane. */
 export async function exportFurnitureUSDZ(
-  parts: Part[],
   config: FurnitureConfig,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const { USDZExporter } = await import("three/addons/exporters/USDZExporter.js");
-  const scene = createFurnitureScene(parts, config);
+  const scene = createFurnitureScene(config);
   try {
     return await new USDZExporter().parseAsync(scene, {
       quickLookCompatible: true,

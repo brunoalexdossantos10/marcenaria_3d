@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import * as THREE from "three";
 import { X } from "lucide-react";
-import type { FurnitureConfig, Part } from "@/lib/furniture/types";
+import type { FurnitureConfig } from "@/lib/furniture/types";
 import { createFurnitureScene } from "@/lib/furniture/usdz";
 import {
   cameraErrorMessage,
@@ -15,12 +15,10 @@ import type { PreviewTransform, TouchPoint } from "@/lib/furniture/arInteraction
 
 /** Camera-only preview: no ARCore, spatial tracking or asserted real-world scale. */
 export default function CameraPreview({
-  parts,
   config,
   onClose,
   onBack,
 }: {
-  parts: Part[];
   config: FurnitureConfig;
   onClose: () => void;
   onBack: () => void;
@@ -209,7 +207,9 @@ export default function CameraPreview({
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       host.appendChild(renderer.domElement);
       renderer.domElement.addEventListener("webglcontextlost", contextLost);
-      scene = createFurnitureScene(parts, config);
+      // The camera intentionally rebuilds from the active configuration. It
+      // must never retain a parts array from a previous furniture selection.
+      scene = createFurnitureScene(config);
       const model = new THREE.Group();
       const contents = new THREE.Group();
       for (const child of [...scene.children]) contents.add(child);
@@ -258,7 +258,7 @@ export default function CameraPreview({
       modelRef.current = null;
     };
     // Transforms update the group directly; they never rebuild the furniture.
-  }, [stream, parts, config, apply]);
+  }, [stream, config, apply]);
 
   const rebase = () => {
     const metrics = gestureMetrics([...pointers.current.values()]);

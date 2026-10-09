@@ -4,10 +4,19 @@ import { ArrowRight, FileDown, Trash2 } from "lucide-react";
 import SiteLayout, { PageHero } from "@/components/site/SiteLayout";
 import Reveal from "@/components/site/Reveal";
 import { fetchProjects, deleteProject, type SavedProject } from "@/lib/furniture/store";
+import { encodeConfiguration } from "@/lib/furniture/configValidation";
 import { ProjectAccount } from "@/components/site/ProjectAccount";
 import { typeDef } from "@/lib/furniture/types";
 import { material } from "@/lib/furniture/materials";
 import { brl } from "@/lib/furniture/pricing";
+
+function resumeHref(project: SavedProject) {
+  try {
+    return `/configurador?c=${encodeURIComponent(encodeConfiguration(project.config))}`;
+  } catch {
+    return null;
+  }
+}
 
 export const Route = createFileRoute("/meus-projetos")({
   ssr: false,
@@ -124,9 +133,23 @@ function MeusProjetosPage() {
                   <p className="mt-5 font-display text-2xl tabular-nums">{brl(p.price)}</p>
 
                   <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
-                    <Link to="/configurador" className="chip">
-                      Retomar
-                    </Link>
+                    {resumeHref(p) ? (
+                      <a href={resumeHref(p)!} className="chip">
+                        Retomar
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        className="chip"
+                        onClick={() =>
+                          setError(
+                            "Este projeto é grande demais para retomar por link; baixe o JSON.",
+                          )
+                        }
+                      >
+                        Retomar
+                      </button>
+                    )}
                     <button type="button" onClick={() => download(p)} className="chip">
                       <FileDown className="mr-1.5 size-3.5" /> JSON
                     </button>

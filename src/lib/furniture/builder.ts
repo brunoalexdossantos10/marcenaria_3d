@@ -130,10 +130,544 @@ export function normalizeConfig(
 
 /**
  * Parametric furniture builder: turns a plain config object into a list of
- * physical parts (position + size in cm). Adding a new furniture type only
- * requires new rules here — the 3D layer just renders parts.
+ * physical parts (position + size in cm). The renderer deliberately has no
+ * knowledge of furniture categories: the selected type is resolved here,
+ * before the model is sent to the 3D, camera or export layers.
  */
 export function buildFurniture(input: FurnitureConfig): Part[] {
+  const cfg = normalizeConfig(input);
+  const baseType = typeDef(cfg.type).baseType ?? cfg.type;
+  if (baseType === "mesa") return buildDeskFurniture(cfg);
+  if (baseType === "painel-tv") return buildPanelFurniture(cfg);
+  return buildCabinetFurniture(cfg);
+}
+
+function pushWithAccessoryOffset(cfg: FurnitureConfig, parts: Part[], part: Part) {
+  const offset = part.kind === "acessorio" ? cfg.accessoryOffsets?.[part.id] : undefined;
+  parts.push(
+    offset ? { ...part, pos: part.pos.map((v, i) => v + offset[i]!) as Part["pos"] } : part,
+  );
+}
+
+function createHandlePart(cfg: FurnitureConfig, host: Part, kind: "porta" | "gaveta"): Part | null {
+  const h = cfg.handle;
+  if (!h || h.model === "nenhum") return null;
+  const [hw, hh, ht] = host.size;
+  const vertical = kind === "porta" && h.orientation === "vertical";
+  const len = Math.max(6, Math.min(h.size || 20, vertical ? hh - 8 : hw - 6));
+  const edge = kind === "porta" ? (host.hinge === 1 ? -1 : 1) : 0;
+  const px = kind === "porta" ? edge * (hw / 2 - 4) : 0;
+  const py = kind === "porta" ? (vertical ? 0 : -hh / 2 + 8) : 0;
+  return {
+    id: `puxador-${host.id}`,
+    kind: "puxador",
+    label: `Puxador · ${host.label}`,
+    parent: host.id,
+    pos: [px, py, ht / 2 + 0.2],
+    size: vertical ? [2.4, len, 3.2] : [len, 2.4, 3.2],
+    handle: {
+      model: h.model,
+      finish: h.finish,
+      orientation: vertical ? "vertical" : "horizontal",
+    },
+  };
+}
+
+function applyFurnitureOffsets(cfg: FurnitureConfig, parts: Part[]): Part[] {
+  const shelfIds = parts
+    .filter((part) => part.kind === "prateleira" || part.kind === "nicho")
+    .slice(0, 6)
+    .map((part) => part.id);
+  for (const part of parts) {
+    if (!isMovable(part)) continue;
+    part.homePos = [...part.pos];
+    const offset = cfg.componentOffsets?.[part.id];
+    if (!offset) continue;
+    const next = constrainPosition(
+      cfg,
+      parts,
+      part,
+      part.pos.map((value, axis) => value + offset[axis]!) as Part["pos"],
+    );
+    const deltaX = next[0] - part.pos[0];
+    part.pos = next;
+    if (part.sliding && part.slideTo !== undefined) part.slideTo += deltaX;
+    const shelfIndex = shelfIds.indexOf(part.id);
+    if (shelfIndex >= 0) {
+      const strip = parts.find((candidate) => candidate.id === `led-${shelfIndex + 1}`);
+      if (strip) {
+        strip.pos[0] += next[0] - part.homePos[0];
+        strip.pos[1] += next[1] - part.homePos[1];
+      }
+    }
+  }
+  return parts;
+}
+
+function appendComponentInstances(cfg: FurnitureConfig, parts: Part[], push: (part: Part) => void) {
+  const { width: W, height: H, depth: D, panelThickness: t } = cfg;
+  const M = cfg.materials;
+  const cols = Math.max(1, Math.round(cfg.columns));
+  const colW = (W - 2 * t - (cols - 1) * t) / cols;
+  const colCenter = (i: number) => -(W - 2 * t) / 2 + colW / 2 + i * (colW + t);
+  for (const instance of cfg.componentInstances ?? []) {
+    const definition = componentDef(instance.type);
+    if (
+      !definition ||
+      !definition.allowed.includes(typeDef(cfg.type).category) ||
+      D < (definition.minDepth ?? 0)
+    )
+      continue;
+    const col = Math.max(
+      0,
+      Math.min(cols - 1, Math.round((instance.position[0] - colCenter(0)) / (colW + t))),
+    );
+    const x = definition.kind === "divisoria" ? instance.position[0] : colCenter(col);
+    const y = Math.max(t + 2, Math.min(H - t - 2, instance.position[1]));
+    const shallow = Math.max(2, D - BACK_T - 4);
+    const front = definition.kind === "porta" || definition.kind === "gaveta";
+    const size: Part["size"] =
+      definition.kind === "divisoria"
+        ? [t, H - 2 * t, shallow]
+        : definition.kind === "porta"
+          ? [Math.max(4, colW - 0.5), Math.max(4, H - 2 * t), t]
+          : definition.kind === "gaveta"
+            ? [Math.max(4, colW - 1), definition.height ?? 20, t]
+            : definition.kind === "prateleira" || definition.kind === "nicho"
+              ? [Math.max(4, colW - 0.6), t, shallow]
+              : definition.kind === "espelho"
+                ? [Math.max(4, colW - 8), Math.min(Math.max(4, H - 12), 95), 0.6]
+                : definition.kind === "puxador"
+                  ? [Math.min(Math.max(4, colW - 8), 20), 2.4, 3.2]
+                  : definition.kind === "led"
+                    ? [Math.max(6, colW - 6), 0.7, 0.7]
+                    : definition.kind === "cabideiro"
+                      ? [Math.max(4, colW - 4), 2.5, 2.5]
+                      : [Math.max(4, colW - 5), definition.height ?? 3, Math.min(shallow, 28)];
+    const z = front
+      ? D / 2 + t / 2
+      : definition.kind === "espelho" || definition.kind === "puxador"
+        ? D / 2 + 1
+        : definition.kind === "led"
+          ? D / 2 - 4
+          : 0;
+    if (size.some((dimension) => !Number.isFinite(dimension) || dimension <= 0)) continue;
+    const part: Part = {
+      id: instance.id,
+      kind: definition.kind,
+      label: definition.label,
+      pos: [x, y, z],
+      size,
+      material: instance.material ?? (front ? M.portas : M.interior),
+      ...(definition.shape ? { shape: definition.shape } : {}),
+      removable: true,
+      interactive: definition.kind === "porta" || definition.kind === "gaveta",
+      ...(definition.kind === "porta"
+        ? {
+            hinge: -1 as const,
+            face: instance.type === "porta-vidro" ? ("vidro" as const) : cfg.doorFace,
+            sliding: instance.type === "porta-correr",
+            tilt: instance.type === "porta-basculante",
+            openLimit: 95,
+          }
+        : {}),
+      ...(definition.kind === "gaveta" ? { drawer: true, travel: Math.max(10, D - t - 4) } : {}),
+      ...(definition.kind === "led"
+        ? { led: { intensity: cfg.led.intensity, temp: cfg.led.temp } }
+        : {}),
+      ...(definition.kind === "puxador"
+        ? {
+            handle: {
+              model: cfg.handle.model,
+              finish: cfg.handle.finish,
+              orientation: "horizontal" as const,
+            },
+          }
+        : {}),
+    };
+    const placement = findModularPlacement(cfg, parts, part, x, y);
+    if (!placement) continue;
+    part.pos = placement;
+    push(part);
+    if (definition.kind === "porta" || definition.kind === "gaveta") {
+      const handle = createHandlePart(cfg, part, definition.kind);
+      if (handle) push(handle);
+    }
+  }
+}
+
+/** A desk is a top with legs and optional under-top drawers, never a cabinet carcass. */
+function buildDeskFurniture(cfg: FurnitureConfig): Part[] {
+  const { width: W, height: H, depth: D, panelThickness: t } = cfg;
+  const M = cfg.materials;
+  const parts: Part[] = [];
+  const push = (part: Part) => pushWithAccessoryOffset(cfg, parts, part);
+  const legHeight = Math.max(t, H - t);
+  const legDepth = Math.max(t, D - 4);
+
+  push({
+    id: "tampo",
+    kind: "tampo",
+    label: "Tampo da mesa",
+    pos: [0, H - t / 2, 0],
+    size: [W, t, D],
+    material: M.estrutura,
+  });
+  for (const side of [-1, 1]) {
+    push({
+      id: side < 0 ? "perna-esq" : "perna-dir",
+      kind: "lateral",
+      label: side < 0 ? "Perna esquerda" : "Perna direita",
+      pos: [side * (W / 2 - t / 2), legHeight / 2, 0],
+      size: [t, legHeight, legDepth],
+      material: M.estrutura,
+    });
+  }
+  push({
+    id: "travessa-fundo",
+    kind: "fundo",
+    label: "Travessa traseira",
+    pos: [0, Math.max(t * 2, H * 0.38), -D / 2 + t / 2],
+    size: [Math.max(t, W - 2 * t), t, t],
+    material: M.estrutura,
+  });
+
+  const drawerCount = Math.max(0, Math.min(Math.round(cfg.drawers), 8));
+  const drawerH = Math.min(22, Math.max(12, (H - t - 4) / Math.max(drawerCount, 1)));
+  const drawerW = (W - 2 * t - Math.max(0, drawerCount - 1) * 0.6) / Math.max(drawerCount, 1);
+  for (let i = 0; i < drawerCount; i++) {
+    const front: Part = {
+      id: `gaveta-${i}`,
+      kind: "gaveta",
+      label: `Gaveta ${i + 1}`,
+      pos: [-W / 2 + t + drawerW / 2 + i * (drawerW + 0.6), H - t - drawerH / 2 - 2, D / 2 + t / 2],
+      size: [Math.max(4, drawerW), drawerH, t],
+      material: M.portas,
+      drawer: true,
+      interactive: true,
+      travel: Math.max(10, D - t - 4),
+      removable: true,
+    };
+    push(front);
+    const handle = createHandlePart(cfg, front, "gaveta");
+    if (handle) push(handle);
+  }
+
+  const doorCount = Math.max(0, Math.min(Math.round(cfg.doors), 8));
+  const doorSpace = Math.max(t + 4, H - t - 4);
+  const doorH = Math.min(28, Math.max(12, doorSpace / Math.max(doorCount, 1)));
+  const doorW = (W - 2 * t - Math.max(0, doorCount - 1) * 0.6) / Math.max(doorCount, 1);
+  for (let i = 0; i < doorCount; i++) {
+    const door: Part = {
+      id: `porta-mesa-${i}`,
+      kind: "porta",
+      label: `Porta ${i + 1}`,
+      pos: [
+        -W / 2 + t + doorW / 2 + i * (doorW + 0.6),
+        t + doorH / 2 + 2 + i * (doorH + 0.4),
+        D / 2 + t / 2,
+      ],
+      size: [Math.max(4, doorW), doorH, t],
+      material:
+        cfg.doorFace === "vidro" ? "vidro" : cfg.doorFace === "espelho" ? "espelho" : M.portas,
+      face: cfg.doorFace,
+      hinge: i % 2 === 0 ? -1 : 1,
+      sliding: cfg.doorStyle === "correr",
+      tilt: cfg.doorStyle === "basculante",
+      bifold: cfg.doorStyle === "camarao",
+      openLimit: cfg.doorStyle === "dupla" ? 110 : 95,
+      interactive: true,
+      removable: true,
+    };
+    push(door);
+    const handle = createHandlePart(cfg, door, "porta");
+    if (handle) push(handle);
+  }
+
+  const shelves = Math.max(0, Math.min(Math.round(cfg.shelves), 2));
+  const shelfMaterial = cfg.shelfMaterial === "vidro" ? "vidro" : M.interior;
+  for (let i = 0; i < shelves; i++) {
+    push({
+      id: `prateleira-mesa-${i}`,
+      kind: "prateleira",
+      label: `Prateleira inferior ${i + 1}`,
+      pos: [0, Math.max(t + 2, H * (0.28 + i * 0.18)), 0],
+      size: [Math.max(t, W - 2 * t), t, Math.max(t, D - 4)],
+      material: shelfMaterial,
+      removable: true,
+    });
+  }
+
+  if (cfg.mirror) {
+    push({
+      id: "espelho",
+      kind: "espelho",
+      label: "Espelho",
+      pos: [0, H + Math.min(55, H * 0.55), -D / 2 + 0.5],
+      size: [Math.min(W - 12, 70), Math.min(H, 80), 0.6],
+      removable: true,
+    });
+  }
+  if (cfg.led?.on) {
+    push({
+      id: "led-0",
+      kind: "led",
+      label: "LED da mesa",
+      pos: [0, H - t - 1.2, D / 2 - 6],
+      size: [Math.max(6, W - 2 * t), 1, 1.4],
+      led: { intensity: cfg.led.intensity, temp: cfg.led.temp },
+    });
+  }
+  const has = (id: AccessoryId) => cfg.accessories?.includes(id);
+  if (has("divisorias")) {
+    push({
+      id: "acc-divisoria",
+      kind: "acessorio",
+      label: "Divisória da mesa",
+      pos: [0, Math.max(t + 2, (H - t) / 2), 0],
+      size: [1.2, Math.max(t, H - t - 4), Math.max(t, D - 4)],
+      material: M.interior,
+      shape: "placa",
+      removable: true,
+    });
+  }
+  if (has("gavetas-internas")) {
+    for (let i = 0; i < 2; i++) {
+      push({
+        id: `acc-gaveta-interna-${i}`,
+        kind: "acessorio",
+        label: `Gaveta interna ${i + 1}`,
+        pos: [0, Math.max(t + 8, H * 0.32 + i * 16), D / 2 - t - 6],
+        size: [Math.max(4, W / 2 - 4), 13, Math.max(4, D - 12)],
+        material: M.interior,
+        shape: "caixa",
+        removable: true,
+      });
+    }
+  }
+  if (has("organizador")) {
+    push({
+      id: "acc-organizador",
+      kind: "acessorio",
+      label: "Organizador",
+      pos: [0, Math.max(t + 8, H * 0.22), D / 2 - t - 8],
+      size: [Math.min(Math.max(4, W / 2 - 4), 40), 9, Math.max(4, D - 16)],
+      material: M.interior,
+      shape: "caixa",
+      removable: true,
+    });
+  }
+  if (has("torre-tomadas")) {
+    push({
+      id: "acc-tomadas",
+      kind: "acessorio",
+      label: "Torre de tomadas",
+      pos: [W / 2 - 8, H + 7, 0],
+      size: [8, 14, 8],
+      shape: "tubo",
+      material: "preto",
+      removable: true,
+    });
+  }
+  if (has("passagem-cabos")) {
+    push({
+      id: "acc-cabos",
+      kind: "acessorio",
+      label: "Passagem de cabos",
+      pos: [0, H - t - 1, -D / 2 + 6],
+      size: [8, 1, 8],
+      shape: "placa",
+      material: "preto",
+      removable: true,
+    });
+  }
+  if (has("suporte-monitor")) {
+    push({
+      id: "acc-monitor",
+      kind: "acessorio",
+      label: "Suporte para monitor",
+      pos: [0, H + 6, -D / 4],
+      size: [Math.min(W * 0.5, 60), 12, Math.min(D * 0.5, 22)],
+      shape: "caixa",
+      material: M.estrutura,
+      removable: true,
+    });
+  }
+  appendComponentInstances(cfg, parts, push);
+  return applyFurnitureOffsets(cfg, parts);
+}
+
+/** A TV panel is a shallow wall panel with front niches; it has no cabinet carcass. */
+function buildPanelFurniture(cfg: FurnitureConfig): Part[] {
+  const { width: W, height: H, depth: D, panelThickness: t } = cfg;
+  const M = cfg.materials;
+  const parts: Part[] = [];
+  const push = (part: Part) => pushWithAccessoryOffset(cfg, parts, part);
+
+  push({
+    id: "painel-principal",
+    kind: "painel",
+    label: "Painel principal",
+    pos: [0, H / 2, 0],
+    size: [W, H, Math.max(t, D)],
+    material: M.estrutura,
+  });
+  const nicheCount = Math.max(0, Math.min(Math.round(cfg.niches), 6));
+  const columns = Math.max(1, Math.min(Math.round(cfg.columns), nicheCount || 1));
+  const nicheW = Math.max(6, (W - (columns + 1) * t) / columns);
+  for (let i = 0; i < nicheCount; i++) {
+    const column = i % columns;
+    const row = Math.floor(i / columns);
+    const x = -W / 2 + t + nicheW / 2 + column * (nicheW + t);
+    const y = Math.max(t + 4, H - 24 - row * 26);
+    push({
+      id: `nicho-${i}`,
+      kind: "nicho",
+      label: `Nicho ${i + 1}`,
+      pos: [x, y, D / 2 + t / 2],
+      size: [nicheW, t, Math.max(t, D - 2)],
+      material: M.interior,
+      removable: true,
+    });
+  }
+  const shelfMaterial = cfg.shelfMaterial === "vidro" ? "vidro" : M.interior;
+  const shelfCount = Math.max(0, Math.min(Math.round(cfg.shelves), 4));
+  for (let i = 0; i < shelfCount; i++) {
+    push({
+      id: `prateleira-painel-${i}`,
+      kind: "prateleira",
+      label: `Prateleira do painel ${i + 1}`,
+      pos: [0, Math.max(t + 4, H * 0.34 - i * 16), D / 2 + t / 2],
+      size: [Math.max(6, W - 2 * t), t, Math.max(t, D - 2)],
+      material: shelfMaterial,
+      removable: true,
+    });
+  }
+  const storageHeight = Math.min(30, Math.max(12, H * 0.16));
+  const doorCount = Math.max(0, Math.min(Math.round(cfg.doors), 8));
+  const doorW = (W / 2 - t - Math.max(0, doorCount - 1) * 0.6) / Math.max(doorCount, 1);
+  for (let i = 0; i < doorCount; i++) {
+    const door: Part = {
+      id: `porta-painel-${i}`,
+      kind: "porta",
+      label: `Porta do painel ${i + 1}`,
+      pos: [
+        -W / 4 + (i - (doorCount - 1) / 2) * (doorW + 0.6),
+        storageHeight / 2 + t + 2,
+        D / 2 + t / 2,
+      ],
+      size: [Math.max(4, doorW), storageHeight, t],
+      material:
+        cfg.doorFace === "vidro" ? "vidro" : cfg.doorFace === "espelho" ? "espelho" : M.portas,
+      face: cfg.doorFace,
+      hinge: i % 2 === 0 ? -1 : 1,
+      sliding: cfg.doorStyle === "correr",
+      tilt: cfg.doorStyle === "basculante",
+      bifold: cfg.doorStyle === "camarao",
+      openLimit: cfg.doorStyle === "dupla" ? 110 : 95,
+      interactive: true,
+      removable: true,
+    };
+    push(door);
+    const handle = createHandlePart(cfg, door, "porta");
+    if (handle) push(handle);
+  }
+  const drawerCount = Math.max(0, Math.min(Math.round(cfg.drawers), 8));
+  const drawerW = (W / 2 - t - Math.max(0, drawerCount - 1) * 0.6) / Math.max(drawerCount, 1);
+  for (let i = 0; i < drawerCount; i++) {
+    const drawer: Part = {
+      id: `gaveta-painel-${i}`,
+      kind: "gaveta",
+      label: `Gaveta do painel ${i + 1}`,
+      pos: [
+        W / 4 + (i - (drawerCount - 1) / 2) * (drawerW + 0.6),
+        storageHeight / 2 + t + 2,
+        D / 2 + t / 2,
+      ],
+      size: [Math.max(4, drawerW), storageHeight, t],
+      material: cfg.drawerGlassFront ? "vidro" : M.portas,
+      drawer: true,
+      interactive: true,
+      travel: Math.max(10, D - t - 4),
+      removable: true,
+    };
+    push(drawer);
+    const handle = createHandlePart(cfg, drawer, "gaveta");
+    if (handle) push(handle);
+  }
+  if (cfg.mirror) {
+    push({
+      id: "espelho",
+      kind: "espelho",
+      label: "Espelho do painel",
+      pos: [0, H / 2, D / 2 + 0.6],
+      size: [Math.min(W - 12, 140), Math.min(H - 20, 100), 0.6],
+      removable: true,
+    });
+  }
+  if (cfg.accessories?.includes("suporte-tv")) {
+    push({
+      id: "acc-suporte-tv",
+      kind: "acessorio",
+      label: "Suporte para TV",
+      pos: [0, H * 0.52, D / 2 + 2],
+      size: [Math.min(W * 0.75, 120), 70, 3],
+      shape: "placa",
+      material: "preto",
+      removable: true,
+    });
+  }
+  if (cfg.accessories?.includes("painel-ripado")) {
+    push({
+      id: "acc-ripado",
+      kind: "acessorio",
+      label: "Painel ripado",
+      pos: [0, H / 2, D / 2 + 1],
+      size: [W, H * 0.9, 2],
+      shape: "ripado",
+      material: M.portas,
+      removable: true,
+    });
+  }
+  if (cfg.led?.on) {
+    push({
+      id: "led-0",
+      kind: "led",
+      label: "LED do painel",
+      pos: [0, H - t - 1.2, D / 2 + 2],
+      size: [Math.max(6, W - 2 * t), 1, 1.4],
+      led: { intensity: cfg.led.intensity, temp: cfg.led.temp },
+    });
+  }
+  if (cfg.accessories?.includes("passagem-cabos")) {
+    push({
+      id: "acc-cabos",
+      kind: "acessorio",
+      label: "Passagem de cabos",
+      pos: [0, H * 0.52, D / 2 + 2],
+      size: [8, 1, 8],
+      shape: "placa",
+      material: "preto",
+      removable: true,
+    });
+  }
+  if (cfg.accessories?.includes("divisorias")) {
+    push({
+      id: "acc-divisoria-painel",
+      kind: "acessorio",
+      label: "Divisória do painel",
+      pos: [0, H * 0.34, D / 2 + 2],
+      size: [1.2, Math.max(t, H * 0.3), 1],
+      material: M.interior,
+      shape: "placa",
+      removable: true,
+    });
+  }
+  appendComponentInstances(cfg, parts, push);
+  return applyFurnitureOffsets(cfg, parts);
+}
+
+function buildCabinetFurniture(input: FurnitureConfig): Part[] {
   const cfg = normalizeConfig(input);
   const { width: W, height: H, depth: D, panelThickness: t } = cfg;
   const M = cfg.materials;

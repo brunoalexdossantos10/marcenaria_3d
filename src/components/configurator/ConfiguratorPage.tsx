@@ -236,7 +236,7 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
   const share = async () => {
     let url: string;
     try {
-      url = `${window.location.origin}${tenant ? `/m/${tenant.organization.slug}` : "/configurador"}?c=${encodeConfiguration(c.config)}`;
+      url = `${window.location.origin}${tenant ? `/m/${tenant.organization.slug}` : "/configurador"}?c=${encodeURIComponent(encodeConfiguration(c.config))}`;
     } catch (error) {
       notify(error instanceof Error ? error.message : "Não foi possível compartilhar.");
       return;
@@ -666,7 +666,6 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
       )}
       {arOpen && (
         <ARPreview
-          parts={c.parts}
           config={c.config}
           webglAvailable={webglAvailable}
           onClose={() => setArOpen(false)}

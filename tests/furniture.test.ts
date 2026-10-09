@@ -16,6 +16,7 @@ import {
   INITIAL_TRANSFORM,
   cameraErrorMessage,
 } from "../src/lib/furniture/arInteraction.ts";
+import { createFurnitureScene } from "../src/lib/furniture/usdz.ts";
 import type { Part } from "../src/lib/furniture/types.ts";
 
 test("all 104 presets generate finite, positive parts and prices", () => {
@@ -152,6 +153,20 @@ test("shared links support Unicode and cannot bypass a disabled catalog option",
   );
   assert.throws(() => encodeConfiguration({ data: "x".repeat(40000) }));
 });
+
+test("URL-encoded saved links recover the exact furniture configuration", () => {
+  const config = normalizeConfig({
+    type: "mesa",
+    width: 180,
+    material: "nogueira",
+    materials: { estrutura: "nogueira", portas: "carvalho", interior: "branco", fundo: "branco" },
+  });
+  const encoded = encodeURIComponent(encodeConfiguration(config));
+  const recovered = decodeConfiguration(new URLSearchParams(`c=${encoded}`).get("c")!);
+  assert.equal(recovered.type, "mesa");
+  assert.equal(recovered.width, 180);
+  assert.equal(recovered.material, "nogueira");
+});
 test("one-finger pan and two-finger pinch/rotation use bounded transforms", () => {
   const start = gestureMetrics([
     { x: 0, y: 0 },
@@ -173,4 +188,48 @@ test("one-finger pan and two-finger pinch/rotation use bounded transforms", () =
     cameraErrorMessage(new DOMException("busy", "NotReadableError")),
     /outro aplicativo/,
   );
+});
+
+test("desk and TV panel use category-specific geometry instead of wardrobe carcass", () => {
+  const desk = buildFurniture(normalizeConfig({ type: "mesa" }));
+  const panel = buildFurniture(normalizeConfig({ type: "painel-tv" }));
+  assert.ok(desk.some((part) => part.id === "perna-esq"));
+  assert.ok(!desk.some((part) => part.id === "lateral-esq"));
+  assert.ok(panel.some((part) => part.id === "painel-principal" && part.kind === "painel"));
+  assert.ok(!panel.some((part) => part.id === "lateral-esq"));
+});
+
+test("camera scene is rebuilt from the active config and changes furniture identity", () => {
+  const wardrobe = normalizeConfig({ type: "guarda-roupa" });
+  const desk = normalizeConfig({ type: "mesa", width: 180, height: 75, depth: 70 });
+  const wardrobeScene = createFurnitureScene(wardrobe);
+  const deskScene = createFurnitureScene(desk);
+  assert.ok(wardrobeScene.children.some((child) => child.name === "Lateral esquerda"));
+  assert.ok(deskScene.children.some((child) => child.name === "Tampo da mesa"));
+  assert.ok(!deskScene.children.some((child) => child.name === "Lateral esquerda"));
+  assert.ok(deskScene.children.some((child) => child.name === "Perna esquerda"));
+});
+
+test("specific families keep editable counters and modular components", () => {
+  for (const type of ["mesa", "painel-tv"] as const) {
+    const config = normalizeConfig({
+      type,
+      doors: 2,
+      drawers: 2,
+      shelves: 2,
+      mirror: true,
+      componentInstances: [{ id: "mod-prateleira", type: "prateleira", position: [0, 40, 0] }],
+    });
+    const parts = buildFurniture(config);
+    assert.equal(parts.filter((part) => part.kind === "porta").length, 2, type);
+    assert.equal(parts.filter((part) => part.kind === "gaveta").length, 2, type);
+    assert.ok(
+      parts.some((part) => part.id === "mod-prateleira"),
+      type,
+    );
+    assert.ok(
+      parts.some((part) => part.kind === "espelho"),
+      type,
+    );
+  }
 });

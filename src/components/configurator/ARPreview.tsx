@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { X, ScanLine, Smartphone } from "lucide-react";
-import type { FurnitureConfig, Part } from "@/lib/furniture/types";
+import type { FurnitureConfig } from "@/lib/furniture/types";
 import { createFurnitureScene, exportFurnitureUSDZ } from "@/lib/furniture/usdz";
 import CameraPreview from "./CameraPreview";
 import {
@@ -19,13 +19,12 @@ type ARStatus = "preparing" | "ready" | "starting" | "placing" | "placed" | "uns
 type XRSessionLike = XRSession;
 
 type Props = {
-  parts: Part[];
   config: FurnitureConfig;
   webglAvailable: boolean;
   onClose: () => void;
 };
 
-export default function ARPreview({ parts, config, webglAvailable, onClose }: Props) {
+export default function ARPreview({ config, webglAvailable, onClose }: Props) {
   const isIOS =
     typeof navigator !== "undefined" &&
     (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -98,7 +97,7 @@ export default function ARPreview({ parts, config, webglAvailable, onClose }: Pr
     if (!isIOS) return;
     let cancelled = false;
     let url: string | null = null;
-    void exportFurnitureUSDZ(parts, config)
+    void exportFurnitureUSDZ(config)
       .then((data) => {
         if (cancelled) return;
         url = URL.createObjectURL(new Blob([data], { type: "model/vnd.usdz+zip" }));
@@ -116,7 +115,7 @@ export default function ARPreview({ parts, config, webglAvailable, onClose }: Pr
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [isIOS, parts, config]);
+  }, [isIOS, config]);
 
   useEffect(() => {
     if (isIOS || mode !== "xr" || xrSupported !== true) return undefined;
@@ -138,7 +137,7 @@ export default function ARPreview({ parts, config, webglAvailable, onClose }: Pr
       host.appendChild(renderer.domElement);
       rendererRef.current = renderer;
 
-      const scene = createFurnitureScene(parts, config);
+      const scene = createFurnitureScene(config);
       scene.background = null;
       const furniture = new THREE.Group();
       for (const child of [...scene.children]) furniture.add(child);
@@ -225,7 +224,7 @@ export default function ARPreview({ parts, config, webglAvailable, onClose }: Pr
       setStatus("error");
       return undefined;
     }
-  }, [isIOS, mode, xrSupported, webglAvailable, parts, config]);
+  }, [isIOS, mode, xrSupported, webglAvailable, config]);
 
   const applyTransform = (next: PreviewTransform) => {
     const bounded = { ...next, scale: clampScale(next.scale) };
@@ -371,7 +370,7 @@ export default function ARPreview({ parts, config, webglAvailable, onClose }: Pr
   const copyToPhone = async () => {
     let url: string;
     try {
-      url = `${window.location.origin}${window.location.pathname}?c=${encodeConfiguration(config)}`;
+      url = `${window.location.origin}${window.location.pathname}?c=${encodeURIComponent(encodeConfiguration(config))}`;
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : "Não foi possível criar o link.");
       setStatus("error");
@@ -599,9 +598,7 @@ export default function ARPreview({ parts, config, webglAvailable, onClose }: Pr
   const overlay =
     !isIOS && typeof document !== "undefined" ? document.getElementById("ar-dom-overlay") : null;
   if (mode === "camera")
-    return (
-      <CameraPreview parts={parts} config={config} onClose={onClose} onBack={() => setMode("xr")} />
-    );
+    return <CameraPreview config={config} onClose={onClose} onBack={() => setMode("xr")} />;
   return (
     <div className="fixed inset-0 z-[100] bg-black">
       {!isIOS && <div ref={hostRef} className="absolute inset-0" />}
