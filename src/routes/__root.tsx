@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -34,13 +35,15 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error }: { error: Error }) {
+function ErrorComponent({ error }: ErrorComponentProps) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorName = error instanceof Error ? error.name : "Erro desconhecido";
   console.error(error);
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
     if (
       /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|Unable to preload/i.test(
-        error.message,
+        errorMessage,
       )
     ) {
       try {
@@ -54,7 +57,7 @@ function ErrorComponent({ error }: { error: Error }) {
         // The manual reload remains available when session storage is blocked.
       }
     }
-  }, [error]);
+  }, [error, errorMessage]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -67,7 +70,7 @@ function ErrorComponent({ error }: { error: Error }) {
         </p>
         <details className="mt-4 text-left text-xs text-muted-foreground">
           <summary className="cursor-pointer">Detalhes do erro</summary>
-          <p className="mt-2 break-words">{error.message || error.name}</p>
+          <p className="mt-2 break-words">{errorMessage || errorName}</p>
         </details>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
