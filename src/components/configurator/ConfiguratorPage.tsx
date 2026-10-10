@@ -25,6 +25,7 @@ import { MATERIALS } from "@/lib/furniture/materials";
 import { constrainPose, footprint, type FurniturePose } from "@/lib/furniture/positioning";
 import { roomSize } from "@/lib/furniture/roomBounds";
 import { typeDef } from "@/lib/furniture/types";
+import movaLogo from "@/assets/mova-logo-transparent.png";
 import type { PlacementMode } from "@/components/configurator/FurniturePlacement";
 import EnvironmentPicker from "@/components/configurator/environments/EnvironmentPicker";
 import type { EnvironmentChoice } from "@/components/configurator/environments/types";
@@ -370,6 +371,8 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
           >
             {tenant?.organization.logo ? (
               <img src={tenant.organization.logo} alt="" className="h-7 max-w-20 object-contain" />
+            ) : !tenant ? (
+              <img src={movaLogo} alt="MOVA" className="mova-configurator-logo" />
             ) : (
               <ArrowLeft className="size-4" />
             )}{" "}

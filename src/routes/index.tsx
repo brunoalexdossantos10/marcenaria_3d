@@ -25,6 +25,7 @@ import heroImage from "@/assets/hero-marcenaria.jpg";
 import kitchenImage from "@/assets/cozinha.jpg";
 import officeImage from "@/assets/home-office.jpg";
 import workshopImage from "@/assets/oficina.jpg";
+import movaLogoWhite from "@/assets/mova-logo-white.png";
 
 const MovaCabinetScene = lazy(() => import("@/components/landing/MovaCabinetScene"));
 
@@ -142,11 +143,8 @@ function Landing() {
     <main className="mova-landing overflow-hidden bg-[#f2efe8] text-[#26231f]">
       <header className="absolute inset-x-0 top-0 z-20 border-b border-white/20 text-white">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-5 lg:px-10">
-          <Link to="/" className="group flex items-center gap-3" aria-label="MOVA início">
-            <span className="flex size-9 items-center justify-center border border-white/60 text-sm font-semibold tracking-[-0.08em] transition group-hover:bg-white group-hover:text-[#26231f]">
-              M/
-            </span>
-            <span className="text-[15px] font-semibold tracking-[0.22em]">MOVA</span>
+          <Link to="/" className="group flex items-center" aria-label="MOVA início">
+            <img src={movaLogoWhite} alt="MOVA" className="mova-brand-logo mova-brand-logo-light" />
           </Link>
           <nav className="hidden items-center gap-8 text-[11px] uppercase tracking-[0.2em] text-white/75 lg:flex">
             <a className="mova-nav-link" href="#processo">
@@ -407,8 +405,12 @@ function Landing() {
         </Reveal>
         <footer className="relative z-10 mx-auto mt-24 flex max-w-[1440px] flex-col gap-8 border-t border-white/20 pt-7 text-left md:flex-row md:items-end md:justify-between">
           <div>
-            <Link to="/" className="text-lg font-semibold tracking-[0.22em]">
-              MOVA
+            <Link to="/" className="inline-flex" aria-label="MOVA início">
+              <img
+                src={movaLogoWhite}
+                alt="MOVA"
+                className="mova-brand-logo mova-brand-logo-footer"
+              />
             </Link>
             <p className="mt-3 max-w-xs text-xs leading-5 text-white/50">
               Experiência de projeto 3D para móveis que pertencem ao seu espaço.

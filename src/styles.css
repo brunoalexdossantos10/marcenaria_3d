@@ -829,3 +829,33 @@ textarea.field {
     display: none;
   }
 }
+
+.mova-brand-logo {
+  display: block;
+  width: auto;
+  object-fit: contain;
+}
+.mova-brand-logo-light {
+  height: 2.85rem;
+  width: 8.4rem;
+}
+.mova-brand-logo-footer {
+  height: 2.6rem;
+  width: 8.1rem;
+}
+.mova-configurator-logo {
+  display: block;
+  width: 6.2rem;
+  height: 2.25rem;
+  object-fit: contain;
+}
+@media (max-width: 640px) {
+  .mova-brand-logo-light {
+    height: 2.45rem;
+    width: 7.2rem;
+  }
+  .mova-configurator-logo {
+    width: 5.5rem;
+    height: 2rem;
+  }
+}
