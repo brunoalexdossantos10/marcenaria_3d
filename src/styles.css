@@ -669,3 +669,163 @@ textarea.field {
     scroll-behavior: auto !important;
   }
 }
+
+/* MOVA 3D experience and section transitions */
+.mova-process-section::after,
+.mova-value-section::before,
+.mova-final-cta::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 10rem;
+  pointer-events: none;
+  z-index: 1;
+}
+.mova-process-section::after {
+  bottom: -1px;
+  background: linear-gradient(to bottom, transparent, #f2efe8);
+}
+.mova-value-section::before {
+  top: -1px;
+  background: linear-gradient(to bottom, #d9d0c2, transparent);
+}
+.mova-final-cta::before {
+  top: -1px;
+  background: linear-gradient(to bottom, #f2efe8, transparent);
+}
+.mova-transition-top,
+.mova-transition-clay,
+.mova-transition-dark {
+  position: absolute;
+  inset-inline: 0;
+  height: 5rem;
+  pointer-events: none;
+}
+.mova-transition-top {
+  top: -1px;
+  background: linear-gradient(to bottom, #f2efe8, transparent);
+}
+.mova-transition-clay {
+  top: -1px;
+  background: linear-gradient(to bottom, #d9d0c2, transparent);
+}
+.mova-transition-dark {
+  bottom: 0;
+  height: 7rem;
+  background: linear-gradient(to top, #26231f, transparent);
+}
+.mova-process-section > div,
+.mova-value-section > div,
+.mova-final-cta > div,
+.mova-final-cta > footer {
+  position: relative;
+  z-index: 2;
+}
+.mova-3d-stage {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(circle at 54% 38%, #d9c4aa, #ad9277 78%);
+  box-shadow: 0 28px 65px rgba(82, 57, 38, 0.18);
+}
+.mova-3d-stage canvas {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100% !important;
+  height: 520px !important;
+}
+.mova-3d-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.38) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.38) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(420px) rotateX(62deg) scale(1.6) translateY(34%);
+  transform-origin: center bottom;
+}
+.mova-3d-glow {
+  position: absolute;
+  z-index: 1;
+  top: 10%;
+  left: 36%;
+  width: 32%;
+  height: 45%;
+  border-radius: 50%;
+  background: rgba(255, 239, 213, 0.55);
+  filter: blur(55px);
+}
+.mova-scene-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.mova-scene-caption {
+  position: absolute;
+  z-index: 4;
+  inset-inline: 1.25rem;
+  bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  pointer-events: none;
+}
+.mova-replay {
+  position: absolute;
+  z-index: 5;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.55rem 0.7rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.mova-replay:hover {
+  background: #f2efe8;
+  color: #26231f;
+}
+.mova-value-section {
+  isolation: isolate;
+}
+@media (max-width: 640px) {
+  .mova-3d-stage,
+  .mova-3d-stage canvas {
+    min-height: 390px;
+    height: 390px !important;
+  }
+  .mova-scene-caption {
+    font-size: 8px;
+  }
+  .mova-replay {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mova-3d-stage canvas {
+    opacity: 0.96;
+  }
+  .mova-replay {
+    display: none;
+  }
+}
