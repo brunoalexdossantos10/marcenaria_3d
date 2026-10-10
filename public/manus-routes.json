@@ -1,0 +1,16 @@
+{
+  "routes": [
+    { "path": "/", "title": "MOVA — O design do seu próximo móvel começa aqui" },
+    { "path": "/configurador", "title": "Modelador 3D" },
+    { "path": "/portfolio", "title": "Projetos" },
+    { "path": "/servicos", "title": "Serviços" },
+    { "path": "/sobre", "title": "Sobre" },
+    { "path": "/contato", "title": "Contato" },
+    { "path": "/login", "title": "Entrar" },
+    { "path": "/cadastro", "title": "Criar conta" },
+    { "path": "/meus-projetos", "title": "Meus projetos" },
+    { "path": "/recuperar-senha", "title": "Recuperar senha" },
+    { "path": "/nova-senha", "title": "Nova senha" },
+    { "path": "/m/:tenant", "title": "Configurador público" }
+  ]
+}

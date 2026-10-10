@@ -282,3 +282,390 @@ textarea.field {
     transition: none;
   }
 }
+
+/* MOVA editorial landing */
+.mova-landing {
+  --mova-ink: #26231f;
+  --mova-paper: #f2efe8;
+  --mova-clay: #d9d0c2;
+  --mova-caramel: #9b7958;
+  --mova-line: rgba(38, 35, 31, 0.18);
+}
+.mova-landing a,
+.mova-landing button {
+  -webkit-tap-highlight-color: transparent;
+}
+.mova-nav-link {
+  position: relative;
+  transition: color 0.25s ease;
+}
+.mova-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -8px;
+  height: 1px;
+  background: currentColor;
+  transition: right 0.3s ease;
+}
+.mova-nav-link:hover {
+  color: white;
+}
+.mova-nav-link:hover::after {
+  right: 0;
+}
+.mova-header-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  padding: 0.75rem 1rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+.mova-header-cta:hover {
+  background: white;
+  color: var(--mova-ink);
+}
+.mova-kicker {
+  font-size: 10px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #9b7958;
+}
+.mova-button-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: #f2efe8;
+  color: #26231f;
+  padding: 1rem 1.2rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease;
+}
+.mova-button-light:hover {
+  transform: translateY(-3px);
+  background: white;
+}
+.mova-button-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+  padding: 1rem 0.2rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+.mova-button-line:hover {
+  color: #d9b48b;
+  border-color: #d9b48b;
+}
+.mova-section {
+  position: relative;
+}
+.mova-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.mova-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.mova-process-section {
+  position: relative;
+  isolation: isolate;
+}
+.mova-process-section::before {
+  content: "MOVA";
+  position: absolute;
+  z-index: -1;
+  top: 5rem;
+  right: -4rem;
+  color: rgba(255, 255, 255, 0.18);
+  font-size: clamp(8rem, 26vw, 28rem);
+  font-weight: 600;
+  letter-spacing: -0.1em;
+  line-height: 0.8;
+  pointer-events: none;
+}
+.mova-specimen-note {
+  border-left: 1px solid #9b7958;
+  padding: 1.5rem 1.75rem;
+}
+.mova-cabinet-stage {
+  position: relative;
+  min-height: 460px;
+  overflow: hidden;
+  background: #bba992;
+  perspective: 1000px;
+}
+.mova-stage-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.25;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.35) 1px, transparent 1px);
+  background-size: 46px 46px;
+  transform: perspective(450px) rotateX(58deg) scale(1.6) translateY(32%);
+  transform-origin: center bottom;
+}
+.mova-cabinet-shadow {
+  position: absolute;
+  bottom: 18%;
+  left: 18%;
+  width: 64%;
+  height: 13%;
+  border-radius: 50%;
+  background: rgba(46, 34, 24, 0.3);
+  filter: blur(18px);
+  transform: rotate(-4deg);
+}
+.mova-cabinet {
+  position: absolute;
+  left: 18%;
+  top: 22%;
+  width: 64%;
+  height: 57%;
+  transform: rotateX(2deg) rotateY(-8deg) rotateZ(-2deg);
+  transform-style: preserve-3d;
+  animation: mova-float 7s ease-in-out infinite;
+}
+.mova-cabinet-top {
+  position: absolute;
+  inset: -10px 0 auto;
+  height: 12px;
+  background: #d0b592;
+  transform: skewX(-38deg);
+  transform-origin: left;
+}
+.mova-cabinet-side {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  background: #705139;
+}
+.mova-cabinet-side.left {
+  left: 0;
+}
+.mova-cabinet-side.right {
+  right: 0;
+}
+.mova-cabinet-interior {
+  position: absolute;
+  inset: 14px 16px 42%;
+  background: #5b4535;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 0 14px;
+}
+.mova-cabinet-interior span {
+  height: 5px;
+  background: #c7aa82;
+  box-shadow: 0 2px 0 rgba(30, 20, 12, 0.25);
+}
+.mova-cabinet-door {
+  position: absolute;
+  bottom: 0;
+  height: 59%;
+  width: 38%;
+  background: linear-gradient(115deg, #8e6748, #654632);
+  border: 4px solid #533a29;
+  transform-origin: left center;
+}
+.mova-cabinet-door i {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 4px;
+  height: 34px;
+  background: #c5a77d;
+}
+.mova-cabinet-door.door-one {
+  left: 16px;
+  animation: mova-door-one 6s ease-in-out infinite;
+}
+.mova-cabinet-door.door-two {
+  left: 50%;
+  animation: mova-door-two 6s 0.1s ease-in-out infinite;
+}
+.mova-cabinet-drawer {
+  position: absolute;
+  left: 16px;
+  width: calc(100% - 32px);
+  height: 15%;
+  background: #9a704d;
+  border: 4px solid #68472f;
+}
+.mova-cabinet-drawer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 3px;
+  background: #c5a77d;
+  transform: translate(-50%, -50%);
+}
+.mova-cabinet-drawer.drawer-one {
+  bottom: 36%;
+  animation: mova-drawer-one 6s 0.1s ease-in-out infinite;
+}
+.mova-cabinet-drawer.drawer-two {
+  bottom: 20%;
+  animation: mova-drawer-two 6s 0.2s ease-in-out infinite;
+}
+.mova-stage-label {
+  position: absolute;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.76);
+}
+.mova-stage-label::before {
+  content: "";
+  display: inline-block;
+  width: 36px;
+  height: 1px;
+  margin: 0 8px 3px 0;
+  background: currentColor;
+}
+.mova-stage-label.label-top {
+  top: 18%;
+  left: 8%;
+}
+.mova-stage-label.label-side {
+  top: 54%;
+  right: 7%;
+}
+.mova-stage-label.label-bottom {
+  bottom: 12%;
+  left: 10%;
+}
+.mova-product-window {
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.24);
+}
+.mova-ui-label {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #9b7958;
+}
+.mova-input {
+  display: inline-flex;
+  min-width: 42px;
+  justify-content: center;
+  border: 1px solid #d3c9bb;
+  padding: 0.45rem 0.35rem;
+  font-size: 11px;
+}
+@keyframes mova-float {
+  0%,
+  100% {
+    transform: rotateX(2deg) rotateY(-8deg) rotateZ(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotateX(2deg) rotateY(-8deg) rotateZ(-2deg) translateY(-8px);
+  }
+}
+@keyframes mova-door-one {
+  0%,
+  18%,
+  78%,
+  100% {
+    transform: rotateY(0);
+  }
+  42%,
+  58% {
+    transform: rotateY(-24deg);
+  }
+}
+@keyframes mova-door-two {
+  0%,
+  22%,
+  82%,
+  100% {
+    transform: rotateY(0);
+  }
+  45%,
+  62% {
+    transform: rotateY(21deg);
+  }
+}
+@keyframes mova-drawer-one {
+  0%,
+  20%,
+  80%,
+  100% {
+    transform: translateX(0);
+  }
+  42%,
+  62% {
+    transform: translateX(18px);
+  }
+}
+@keyframes mova-drawer-two {
+  0%,
+  26%,
+  84%,
+  100% {
+    transform: translateX(0);
+  }
+  48%,
+  66% {
+    transform: translateX(11px);
+  }
+}
+@media (max-width: 640px) {
+  .mova-cabinet-stage {
+    min-height: 350px;
+  }
+  .mova-cabinet {
+    left: 12%;
+    width: 76%;
+  }
+  .mova-stage-label {
+    font-size: 8px;
+  }
+  .mova-process-section::before {
+    top: 10rem;
+    right: -2rem;
+    font-size: 10rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mova-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .mova-cabinet,
+  .mova-cabinet-door,
+  .mova-cabinet-drawer {
+    animation: none;
+  }
+  .mova-landing * {
+    scroll-behavior: auto !important;
+  }
+}
