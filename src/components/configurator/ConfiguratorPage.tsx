@@ -1,7 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { Component, lazy, Suspense, useState, useRef, useCallback } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { ArrowLeft, RotateCcw, SlidersHorizontal, Share2, Download, ScanLine } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Info,
+  Lock,
+  RotateCcw,
+  ScanLine,
+  Share2,
+  SlidersHorizontal,
+  Unlock,
+  X,
+} from "lucide-react";
 import {
   useConfigurator,
   BASE_CONFIG,
@@ -151,6 +162,19 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [mobileDevice] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches,
+  );
+  const [mobileEditLocked, setMobileEditLocked] = useState(mobileDevice);
+  const [showMobileHint, setShowMobileHint] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia("(pointer: coarse)").matches)
+      return false;
+    try {
+      return localStorage.getItem("mova.mobile-edit-hint.v1") !== "dismissed";
+    } catch {
+      return true;
+    }
+  });
   const [positioning, setPositioning] = useState(false);
   const [placementMode, setPlacementMode] = useState<PlacementMode>("mover");
   const [sensitivity, setSensitivity] = useState(0.25);
@@ -189,6 +213,20 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
   const [toast, setToast] = useState<string | null>(null);
   const [arOpen, setArOpen] = useState(false);
   const openAR = () => setArOpen(true);
+  const dismissMobileHint = () => {
+    setShowMobileHint(false);
+    try {
+      localStorage.setItem("mova.mobile-edit-hint.v1", "dismissed");
+    } catch {
+      /* Private browsing may deny localStorage. */
+    }
+  };
+  const toggleMobileEditLock = () => {
+    setMobileEditLocked((locked) => !locked);
+    setEditing(false);
+    setPositioning(false);
+    dismissMobileHint();
+  };
 
   const go = (name: CameraView) => setView((v) => ({ name, n: v.n + 1 }));
 
@@ -342,6 +380,7 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
                 view={view}
                 environment={environment}
                 onCaptureReady={registerCapture}
+                interactionLocked={mobileDevice && mobileEditLocked}
               />
             </Suspense>
           </SceneErrorBoundary>
@@ -379,6 +418,23 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
             {tenant?.organization.name ?? "Início"}
           </a>
           <div className="pointer-events-auto flex gap-2">
+            {mobileDevice && (
+              <button
+                type="button"
+                onClick={toggleMobileEditLock}
+                aria-pressed={!mobileEditLocked}
+                aria-label={
+                  mobileEditLocked ? "Desbloquear edição do móvel" : "Bloquear edição do móvel"
+                }
+                title={mobileEditLocked ? "Desbloquear edição" : "Bloquear edição"}
+                className={`btn-ghost h-10 min-w-10 px-3 ${mobileEditLocked ? "border-primary bg-secondary" : "border-primary text-primary"}`}
+              >
+                {mobileEditLocked ? <Lock className="size-4" /> : <Unlock className="size-4" />}
+                <span className="hidden text-xs sm:inline">
+                  {mobileEditLocked ? "Explorar" : "Editar"}
+                </span>
+              </button>
+            )}
             {tenant && (
               <button
                 type="button"
@@ -428,6 +484,7 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
         <div className="absolute left-4 top-20 z-10 max-w-60 rounded-xl border border-border bg-card/95 p-2 shadow-soft backdrop-blur">
           <button
             type="button"
+            disabled={mobileDevice && mobileEditLocked}
             onClick={() => {
               setEditing((current) => !current);
               setPositioning(false);
@@ -439,6 +496,7 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
           <button
             type="button"
             aria-pressed={positioning}
+            disabled={mobileDevice && mobileEditLocked}
             onClick={() => {
               setPositioning((value) => !value);
               setEditing(false);
@@ -591,6 +649,22 @@ export function ConfiguradorPage({ projectConfig }: { projectConfig?: FurnitureC
             </>
           )}
         </div>
+        {mobileDevice && showMobileHint && (
+          <div className="absolute right-4 top-20 z-20 flex max-w-[min(19rem,calc(100vw-2rem))] gap-2 rounded-xl border border-primary/30 bg-card/95 p-3 text-xs shadow-soft backdrop-blur">
+            <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+            <p className="leading-5">
+              Use o cadeado para alternar entre explorar o móvel e editar seus componentes.
+            </p>
+            <button
+              type="button"
+              onClick={dismissMobileHint}
+              className="shrink-0"
+              aria-label="Fechar dica"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
 
         <EnvironmentPicker value={environment} onChange={setEnvironment} />
 

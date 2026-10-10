@@ -75,18 +75,7 @@ function preferredResolution(): Resolution {
     (device.deviceMemory !== undefined && device.deviceMemory <= 2)
   )
     return "standard";
-  if (
-    device.deviceMemory === undefined &&
-    typeof window !== "undefined" &&
-    window.matchMedia("(pointer: coarse)").matches
-  )
-    return "standard";
-  if (
-    device.deviceMemory === undefined &&
-    navigator.hardwareConcurrency > 0 &&
-    navigator.hardwareConcurrency <= 2
-  )
-    return "standard";
+  if (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 2) return "standard";
   return "high";
 }
 

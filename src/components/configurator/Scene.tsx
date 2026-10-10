@@ -561,6 +561,7 @@ function PartMesh({
     onPointerDown: onDragDown,
     onPointerOver: (e: { stopPropagation: () => void }) => {
       e.stopPropagation();
+      if (readOnly) return;
       setHover(true);
       if (
         (interactive || isMovable(part) || part.kind === "acessorio") &&
@@ -574,7 +575,7 @@ function PartMesh({
     },
     onClick: (e: { stopPropagation: () => void }) => {
       e.stopPropagation();
-      if (grabbing) return;
+      if (readOnly || grabbing) return;
       onSelect(part.id);
     },
     onDoubleClick: (e: { stopPropagation: () => void }) => {
@@ -1202,6 +1203,7 @@ export function Scene({
   placementMode = "mover",
   sensitivity = 0.25,
   onPlace,
+  interactionLocked = false,
 }: {
   parts: Part[];
   config: FurnitureConfig;
@@ -1220,6 +1222,7 @@ export function Scene({
   placementMode?: PlacementMode;
   sensitivity?: number;
   onPlace: (pose: FurniturePose) => void;
+  interactionLocked?: boolean;
 }) {
   // framing size follows every dimension so the furniture stays in frame
   const frame = Math.max(config.width, config.height, config.depth * 1.6);
@@ -1261,8 +1264,24 @@ export function Scene({
     height: sceneHeight,
   };
   const [furnitureSelected, setFurnitureSelected] = useState(false);
-  const lightweight =
+  const isCoarseDevice =
     typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  const lowPowerDevice = (() => {
+    if (!isCoarseDevice || typeof navigator === "undefined") return false;
+    const device = navigator as Navigator & { deviceMemory?: number };
+    return device.deviceMemory !== undefined
+      ? device.deviceMemory <= 2
+      : navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 2;
+  })();
+  const lightweight = lowPowerDevice;
+  const devicePixelRatio = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const maxDpr = Math.min(isCoarseDevice ? (lowPowerDevice ? 1.35 : 1.75) : 1.5, devicePixelRatio);
+  useEffect(() => {
+    if (interactionLocked) {
+      setFurnitureSelected(false);
+      onSelect(null);
+    }
+  }, [interactionLocked, onSelect]);
   const childrenByParent = useMemo(() => {
     const grouped = new Map<string, Part[]>();
     for (const part of parts) {
@@ -1278,7 +1297,8 @@ export function Scene({
     <Canvas
       shadows={!lightweight && { type: THREE.PCFSoftShadowMap }}
       frameloop="demand"
-      dpr={lightweight ? 1 : [1, 1.5]}
+      dpr={[1, maxDpr]}
+      style={{ touchAction: "none" }}
       camera={{ position: [1.8, 1.7, 5.2], fov: 42 }}
       onPointerMissed={() => {
         onSelect(null);
@@ -1317,13 +1337,13 @@ export function Scene({
         config={config}
         roomConfig={roomConfig}
         pose={{ x: center[0], z: center[1], elevation: lift, rotation: config.floorRotation ?? 0 }}
-        enabled={positioning}
+        enabled={positioning && !interactionLocked}
         mode={placementMode}
         sensitivity={sensitivity}
         onCommit={onPlace}
       >
-        <group onPointerDown={() => setFurnitureSelected(true)}>
-          {furnitureSelected && !positioning && (
+        <group onPointerDown={() => !interactionLocked && setFurnitureSelected(true)}>
+          {furnitureSelected && !positioning && !interactionLocked && (
             <FurnitureGizmo config={config} onResize={onResize} />
           )}
           {parts
@@ -1347,6 +1367,7 @@ export function Scene({
                 accessoryOffset={config.accessoryOffsets?.[p.id] ?? [0, 0, 0]}
                 openDoors={config.openDoors}
                 lightweight={lightweight}
+                readOnly={interactionLocked}
                 furnitureId={config.activeFurnitureId ?? "primary"}
               />
             ))}
