@@ -31,6 +31,12 @@ export type FurnitureType =
   | "comoda"
   | "cabeceira"
   | "banheiro"
+  | "mesa-redonda"
+  | "mesa-oval"
+  | "mesa-organica"
+  | "cadeira"
+  | "banco"
+  | "banqueta"
   | (string & {});
 
 export type ModularComponentType = string;
@@ -246,6 +252,8 @@ export interface Part {
   led?: { intensity: number; temp: number };
   /** accessory shape hint */
   shape?: "barra" | "inclinada" | "caixa" | "ripado" | "placa" | "tubo";
+  /** Explicit procedural geometry for non-carcass pieces. */
+  geometry?: "cylinder" | "oval";
   /** part can be dragged open by the user */
   interactive?: boolean;
 }
@@ -623,6 +631,126 @@ const BASE_FURNITURE_TYPES: FurnitureTypeDef[] = [
       mirror: true,
     },
     minDrawerDepth: 30,
+  },
+  {
+    id: "mesa-redonda",
+    label: "Mesa redonda",
+    category: "sala",
+    limits: { width: [70, 220], height: [65, 85], depth: [70, 220] },
+    defaults: {
+      width: 120,
+      height: 75,
+      depth: 120,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Mesa circular com tampo e base central paramétricos.",
+    tags: ["sala", "redonda", "orgânico"],
+  },
+  {
+    id: "mesa-oval",
+    label: "Mesa oval",
+    category: "sala",
+    limits: { width: [100, 300], height: [65, 85], depth: [60, 150] },
+    defaults: {
+      width: 180,
+      height: 75,
+      depth: 95,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Mesa oval de bordas suaves para circulação confortável.",
+    tags: ["sala", "oval", "orgânico"],
+  },
+  {
+    id: "mesa-organica",
+    label: "Mesa orgânica",
+    category: "sala",
+    limits: { width: [90, 260], height: [35, 85], depth: [50, 160] },
+    defaults: {
+      width: 140,
+      height: 45,
+      depth: 80,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Mesa de centro oval com proporções orgânicas.",
+    tags: ["sala", "centro", "orgânico"],
+  },
+  {
+    id: "cadeira",
+    label: "Cadeira",
+    category: "sala",
+    limits: { width: [40, 75], height: [75, 115], depth: [40, 70] },
+    defaults: {
+      width: 48,
+      height: 88,
+      depth: 52,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Cadeira paramétrica com assento, encosto e quatro pés.",
+    tags: ["sala", "assento"],
+  },
+  {
+    id: "banco",
+    label: "Banco",
+    category: "sala",
+    limits: { width: [70, 220], height: [35, 60], depth: [30, 55] },
+    defaults: {
+      width: 120,
+      height: 45,
+      depth: 40,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Banco linear para hall, sala ou pé de cama.",
+    tags: ["sala", "assento", "hall"],
+  },
+  {
+    id: "banqueta",
+    label: "Banqueta",
+    category: "cozinha",
+    limits: { width: [35, 60], height: [60, 85], depth: [35, 60] },
+    defaults: {
+      width: 45,
+      height: 75,
+      depth: 45,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Banqueta para ilhas e bancadas, com apoio estrutural leve.",
+    tags: ["cozinha", "assento"],
   },
 ];
 

@@ -342,9 +342,10 @@ function PartMesh({
 
   const [w, h, d] = part.size.map((v) => v * S) as [number, number, number];
   const [x, y, z] = part.pos.map((v) => v * S) as [number, number, number];
+  const organicGeometry = part.geometry === "cylinder" || part.geometry === "oval";
   const panelGeometry = useMemo(
-    () => (woodId ? woodPanelGeometry(w, h, d, x, y, z) : null),
-    [woodId, x, y, z, w, h, d],
+    () => (woodId && !organicGeometry ? woodPanelGeometry(w, h, d, x, y, z) : null),
+    [woodId, organicGeometry, x, y, z, w, h, d],
   );
   useEffect(() => () => panelGeometry?.dispose(), [panelGeometry]);
   const woodMaterials = useMemo(() => {
@@ -682,6 +683,9 @@ function PartMesh({
   const mesh = (
     <mesh
       key={`${part.id}:${def.id}`}
+      {...(part.geometry === "oval"
+        ? { scale: [w / Math.min(w, d), 1, d / Math.min(w, d)] as [number, number, number] }
+        : {})}
       castShadow={!isMirror}
       receiveShadow
       {...handlers}
@@ -695,6 +699,8 @@ function PartMesh({
     >
       {isRod ? (
         <cylinderGeometry args={[h / 2, h / 2, w, 16]} />
+      ) : part.geometry === "cylinder" || part.geometry === "oval" ? (
+        <cylinderGeometry args={[Math.min(w, d) / 2, Math.min(w, d) / 2, h, 48]} />
       ) : (
         !panelGeometry && <boxGeometry args={[w, h, d]} />
       )}

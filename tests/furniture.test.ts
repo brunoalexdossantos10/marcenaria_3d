@@ -20,8 +20,8 @@ import {
 import { createFurnitureScene } from "../src/lib/furniture/usdz.ts";
 import type { Part } from "../src/lib/furniture/types.ts";
 
-test("all 104 presets generate finite, positive parts and prices", () => {
-  assert.equal(FURNITURE_TYPES.length, 104);
+test("all 117 presets generate finite, positive parts and prices", () => {
+  assert.equal(FURNITURE_TYPES.length, 117);
   for (const definition of FURNITURE_TYPES) {
     const config = normalizeConfig({
       type: definition.id,

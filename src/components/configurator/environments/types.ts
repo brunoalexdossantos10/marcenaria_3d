@@ -1,4 +1,4 @@
-export type RoomKind = "sala" | "cozinha" | "quarto" | "banheiro";
+export type RoomKind = "sala" | "cozinha" | "quarto" | "banheiro" | "lavanderia" | "hall";
 export type RoomStyle = "moderno" | "contemporaneo" | "premium" | "minimalista";
 
 export type EnvironmentChoice = { room: RoomKind; style: RoomStyle };
@@ -47,6 +47,24 @@ export const ROOM_OPTIONS: {
     styles: [
       { id: "moderno", label: "Moderno" },
       { id: "minimalista", label: "Minimalista" },
+      { id: "premium", label: "Premium" },
+    ],
+  },
+  {
+    id: "lavanderia",
+    label: "Lavanderia",
+    styles: [
+      { id: "moderno", label: "Moderna" },
+      { id: "minimalista", label: "Minimalista" },
+      { id: "premium", label: "Premium" },
+    ],
+  },
+  {
+    id: "hall",
+    label: "Hall / Entrada",
+    styles: [
+      { id: "moderno", label: "Moderno" },
+      { id: "contemporaneo", label: "Contemporâneo" },
       { id: "premium", label: "Premium" },
     ],
   },

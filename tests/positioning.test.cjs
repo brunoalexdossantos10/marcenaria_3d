@@ -23,8 +23,8 @@ test("position is clamped to room walls, floor and ceiling using the rotated foo
   const p = constrainPose(cfg, cfg, { x: 10000, z: 10000, elevation: 10000, rotation: 450 }, start);
   assert.equal(p.rotation, 90);
   assert.equal(Math.round(footprint(cfg, 90).depth), 240);
-  assert.ok(p.x <= 348);
-  assert.ok(p.z <= 500);
+  assert.ok(p.x <= 428);
+  assert.ok(p.z <= 614);
   assert.ok(p.elevation <= 88);
   assert.ok(p.elevation >= 0);
 });

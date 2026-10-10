@@ -9,6 +9,8 @@ const rooms = {
   cozinha: lazy(() => import("./Kitchen")),
   quarto: lazy(() => import("./Bedroom")),
   banheiro: lazy(() => import("./Bathroom")),
+  lavanderia: lazy(() => import("./Laundry")),
+  hall: lazy(() => import("./Hall")),
 };
 
 function RoomEntrance({ children }: { children: React.ReactNode }) {
@@ -76,6 +78,14 @@ function CompactRoom({
           position={[side + 0.35, 0.36, back + 0.58]}
           color={p.stone}
           radius={0.015}
+        />
+      )}
+      {(choice.room === "lavanderia" || choice.room === "hall") && (
+        <Box
+          size={[1.55, choice.room === "hall" ? 0.78 : 0.94, 0.5]}
+          position={[side + 0.55, choice.room === "hall" ? 0.39 : 0.47, back + 0.8]}
+          color={choice.room === "hall" ? p.wood : p.stone}
+          radius={0.025}
         />
       )}
       <Plant position={[-side - 0.5, 0, back + 0.8]} scale={0.7} />

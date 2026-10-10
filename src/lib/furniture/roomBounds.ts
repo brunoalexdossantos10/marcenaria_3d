@@ -3,8 +3,8 @@ import type { FurnitureConfig } from "./types";
 /** Room dimensions are in metres; furniture dimensions and stored position are in cm. */
 export function roomSize(width: number, depth: number, height: number) {
   return {
-    w: Math.max(7.6, width * 0.01 + 4.8),
-    d: Math.max(6.4, depth * 0.01 + 5.8),
+    w: Math.max(9.2, width * 0.01 + 6.0),
+    d: Math.max(8.0, depth * 0.01 + 7.0),
     h: Math.max(3.1, height * 0.01 + 0.75),
     back: -depth * 0.005 - 0.34,
     side: width * 0.005 + 1.1,

@@ -26,6 +26,8 @@ import kitchenImage from "@/assets/cozinha.jpg";
 import officeImage from "@/assets/home-office.jpg";
 import workshopImage from "@/assets/oficina.jpg";
 import movaLogoWhite from "@/assets/mova-logo-white.png";
+import { encodeConfiguration } from "@/lib/furniture/configValidation";
+import { DEMO_CONFIG } from "@/lib/furniture/demo";
 
 const MovaCabinetScene = lazy(() => import("@/components/landing/MovaCabinetScene"));
 
@@ -87,7 +89,6 @@ function Reveal({
 function CabinetExperience() {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
-  const [cycle, setCycle] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -115,7 +116,7 @@ function CabinetExperience() {
       <div className="mova-3d-glow" />
       {active ? (
         <Suspense fallback={<div className="mova-scene-loading">Preparando matéria…</div>}>
-          <MovaCabinetScene cycle={cycle} reducedMotion={reducedMotion} />
+          <MovaCabinetScene cycle={0} reducedMotion={reducedMotion} config={DEMO_CONFIG} />
         </Suspense>
       ) : (
         <div className="mova-scene-loading">A cena aparece ao entrar no quadro.</div>
@@ -124,14 +125,13 @@ function CabinetExperience() {
         <span>cena MOVA / 01</span>
         <span>madeira natural · nogueira</span>
       </div>
-      <button
-        type="button"
+      <a
+        href={`/configurador?c=${encodeURIComponent(encodeConfiguration(DEMO_CONFIG))}`}
         className="mova-replay"
-        onClick={() => setCycle((value) => value + 1)}
-        aria-label="Repetir animação do gabinete"
+        aria-label="Repetir construção no modelador 3D"
       >
         <MoveUpRight size={14} /> repetir construção
-      </button>
+      </a>
     </div>
   );
 }
@@ -273,7 +273,7 @@ function Landing() {
                     largura cm
                   </span>
                   <span>
-                    <strong className="block text-lg font-normal text-[#26231f]">04</strong> frentes
+                    <strong className="block text-lg font-normal text-[#26231f]">02</strong> portas
                   </span>
                 </div>
               </div>

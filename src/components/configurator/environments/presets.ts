@@ -47,6 +47,24 @@ const base: Record<RoomKind, EnvironmentPreset> = {
     artificial: 5.1,
     wallFinish: "tile",
   },
+  lavanderia: {
+    floor: "stone",
+    tileMetres: 0.55,
+    windowWidth: 1.25,
+    windowHeight: 1.1,
+    daylight: 2.1,
+    artificial: 5.8,
+    wallFinish: "tile",
+  },
+  hall: {
+    floor: "wood",
+    tileMetres: 0.22,
+    windowWidth: 1.1,
+    windowHeight: 1.6,
+    daylight: 2.0,
+    artificial: 3.5,
+    wallFinish: "paint",
+  },
 };
 
 export function environmentPreset(kind: RoomKind, style: RoomStyle): EnvironmentPreset {

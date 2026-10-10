@@ -137,9 +137,123 @@ export function normalizeConfig(
 export function buildFurniture(input: FurnitureConfig): Part[] {
   const cfg = normalizeConfig(input);
   const baseType = typeDef(cfg.type).baseType ?? cfg.type;
+  if (["mesa-redonda", "mesa-oval", "mesa-organica"].includes(baseType))
+    return buildOrganicTableFurniture(cfg);
+  if (["cadeira", "banco", "banqueta"].includes(baseType)) return buildSeatingFurniture(cfg);
   if (baseType === "mesa") return buildDeskFurniture(cfg);
   if (baseType === "painel-tv") return buildPanelFurniture(cfg);
   return buildCabinetFurniture(cfg);
+}
+
+function buildOrganicTableFurniture(cfg: FurnitureConfig): Part[] {
+  const parts: Part[] = [];
+  const W = cfg.width;
+  const H = cfg.height;
+  const D = cfg.depth;
+  const top = Math.min(5, Math.max(3, H * 0.075));
+  const oval = cfg.type !== "mesa-redonda";
+  const leg = Math.max(5, Math.min(12, Math.min(W, D) * 0.075));
+  parts.push({
+    id: "tampo-organico",
+    kind: "tampo",
+    label: oval ? "Tampo oval" : "Tampo redondo",
+    pos: [0, H - top / 2, 0],
+    size: [W, top, D],
+    material: cfg.materials.estrutura,
+    geometry: oval ? "oval" : "cylinder",
+    removable: true,
+  });
+  if (cfg.type === "mesa-organica") {
+    parts.push({
+      id: "base-organica",
+      kind: "base",
+      label: "Base pedestal",
+      pos: [0, (H - top) / 2, 0],
+      size: [leg * 1.35, H - top, leg * 1.35],
+      material: cfg.materials.estrutura,
+      geometry: "cylinder",
+      removable: true,
+    });
+  } else {
+    const footInsetX = W * 0.28;
+    const footInsetZ = D * 0.28;
+    const tableFeet: [number, number][] = [
+      [-footInsetX, -footInsetZ],
+      [footInsetX, -footInsetZ],
+      [-footInsetX, footInsetZ],
+      [footInsetX, footInsetZ],
+    ];
+    for (const [index, [x, z]] of tableFeet.entries()) {
+      parts.push({
+        id: `pe-${index + 1}`,
+        kind: "lateral",
+        label: `Pé ${index + 1}`,
+        pos: [x, (H - top) / 2, z],
+        size: [leg, H - top, leg],
+        material: cfg.materials.estrutura,
+        removable: true,
+      });
+    }
+  }
+  return parts;
+}
+
+function buildSeatingFurniture(cfg: FurnitureConfig): Part[] {
+  const W = cfg.width;
+  const H = cfg.height;
+  const D = cfg.depth;
+  const parts: Part[] = [];
+  const seatH = cfg.type === "banqueta" ? H * 0.88 : cfg.type === "banco" ? H * 0.72 : H * 0.48;
+  const seatT = Math.max(4, Math.min(8, H * 0.08));
+  const leg = Math.max(3.5, Math.min(7, W * 0.1));
+  parts.push({
+    id: "assento",
+    kind: "tampo",
+    label: "Assento",
+    pos: [0, seatH, 0],
+    size: [W, seatT, D],
+    material: cfg.materials.estrutura,
+    removable: true,
+  });
+  if (cfg.type === "cadeira") {
+    parts.push({
+      id: "encosto",
+      kind: "painel",
+      label: "Encosto",
+      pos: [0, seatH + (H - seatH) / 2, -D / 2 + leg / 2],
+      size: [W - leg * 1.2, H - seatH, leg],
+      material: cfg.materials.estrutura,
+      removable: true,
+    });
+  }
+  const legHeight = Math.max(8, seatH - seatT);
+  const insetX = Math.max(leg * 1.1, W * 0.35);
+  const insetZ = Math.max(leg * 1.1, D * 0.32);
+  const count = cfg.type === "banco" ? 2 : 4;
+  const positions: [number, number][] =
+    count === 2
+      ? [
+          [-insetX, 0],
+          [insetX, 0],
+        ]
+      : [
+          [-insetX, -insetZ],
+          [insetX, -insetZ],
+          [-insetX, insetZ],
+          [insetX, insetZ],
+        ];
+  positions.forEach(([x, z], index) =>
+    parts.push({
+      id: `pe-assento-${index + 1}`,
+      kind: "lateral",
+      label: `Pé ${index + 1}`,
+      pos: [x, legHeight / 2, z],
+      size: [leg, legHeight, leg],
+      material: cfg.materials.estrutura,
+      removable: true,
+    }),
+  );
+  return parts;
 }
 
 function pushWithAccessoryOffset(cfg: FurnitureConfig, parts: Part[], part: Part) {
