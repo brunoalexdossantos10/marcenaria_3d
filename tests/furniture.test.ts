@@ -20,8 +20,8 @@ import {
 import { createFurnitureScene } from "../src/lib/furniture/usdz.ts";
 import type { Part } from "../src/lib/furniture/types.ts";
 
-test("all 117 presets generate finite, positive parts and prices", () => {
-  assert.equal(FURNITURE_TYPES.length, 117);
+test("all 119 presets generate finite, positive parts and prices", () => {
+  assert.equal(FURNITURE_TYPES.length, 119);
   for (const definition of FURNITURE_TYPES) {
     const config = normalizeConfig({
       type: definition.id,
@@ -239,6 +239,37 @@ test("specific families keep editable counters and modular components", () => {
     assert.ok(
       parts.some((part) => part.kind === "espelho"),
       type,
+    );
+  }
+});
+
+test("six diverse base models build real furniture geometry", () => {
+  const models = [
+    { type: "cadeira", required: ["assento", "encosto"] },
+    { type: "mesa-jantar", required: ["tampo-jantar", "perna-jantar-1"] },
+    { type: "mesa-organica", required: ["tampo-organico", "base-organica"] },
+    { type: "mesa", required: ["tampo", "perna-esq"] },
+    { type: "banco", required: ["assento", "pe-assento-1"] },
+    {
+      type: "aparador-organico",
+      required: ["tampo-aparador-organico", "prateleira-aparador-organico"],
+    },
+  ] as const;
+  for (const model of models) {
+    const definition = FURNITURE_TYPES.find((entry) => entry.id === model.type);
+    assert.ok(definition, model.type);
+    const config = normalizeConfig({ type: model.type });
+    const parts = buildFurniture(config);
+    for (const id of model.required)
+      assert.ok(
+        parts.some((part) => part.id === id),
+        `${model.type}:${id}`,
+      );
+    assert.ok(
+      parts.some(
+        (part) => part.geometry === "cylinder" || part.geometry === "oval" || part.kind === "tampo",
+      ),
+      model.type,
     );
   }
 });

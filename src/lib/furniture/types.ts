@@ -34,9 +34,11 @@ export type FurnitureType =
   | "mesa-redonda"
   | "mesa-oval"
   | "mesa-organica"
+  | "mesa-jantar"
   | "cadeira"
   | "banco"
   | "banqueta"
+  | "aparador-organico"
   | (string & {});
 
 export type ModularComponentType = string;
@@ -505,7 +507,7 @@ const BASE_FURNITURE_TYPES: FurnitureTypeDef[] = [
   },
   {
     id: "mesa",
-    label: "Mesa",
+    label: "Escrivaninha",
     category: "escritorio",
     limits: { width: [90, 300], height: [70, 80], depth: [50, 90] },
     defaults: {
@@ -653,6 +655,26 @@ const BASE_FURNITURE_TYPES: FurnitureTypeDef[] = [
     tags: ["sala", "redonda", "orgânico"],
   },
   {
+    id: "mesa-jantar",
+    label: "Mesa de jantar",
+    category: "sala",
+    limits: { width: [120, 300], height: [65, 85], depth: [70, 140] },
+    defaults: {
+      width: 180,
+      height: 76,
+      depth: 90,
+      columns: 1,
+      doors: 0,
+      drawers: 0,
+      shelves: 0,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Mesa de jantar com tampo amplo e estrutura para cadeiras.",
+    tags: ["sala", "jantar", "mesa"],
+  },
+  {
     id: "mesa-oval",
     label: "Mesa oval",
     category: "sala",
@@ -751,6 +773,26 @@ const BASE_FURNITURE_TYPES: FurnitureTypeDef[] = [
     minDrawerDepth: 30,
     description: "Banqueta para ilhas e bancadas, com apoio estrutural leve.",
     tags: ["cozinha", "assento"],
+  },
+  {
+    id: "aparador-organico",
+    label: "Aparador orgânico",
+    category: "sala",
+    limits: { width: [100, 260], height: [65, 110], depth: [30, 60] },
+    defaults: {
+      width: 180,
+      height: 82,
+      depth: 42,
+      columns: 2,
+      doors: 0,
+      drawers: 0,
+      shelves: 1,
+      hanger: false,
+      mirror: false,
+    },
+    minDrawerDepth: 30,
+    description: "Aparador com tampo oval, prateleira e pés cilíndricos.",
+    tags: ["sala", "aparador", "orgânico", "oval"],
   },
 ];
 

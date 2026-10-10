@@ -92,6 +92,110 @@ function Thumbnail({
   );
 }
 
+function DistinctThumbnail({ type }: { type: FurnitureType }) {
+  const seating = ["cadeira", "banco", "banqueta"].includes(type);
+  const table = ["mesa", "mesa-jantar", "mesa-redonda", "mesa-oval", "mesa-organica"].includes(
+    type,
+  );
+  const sideboard = type === "aparador-organico";
+  return (
+    <svg
+      viewBox="0 0 96 75"
+      className="h-16 w-20 shrink-0"
+      role="img"
+      aria-label="Miniatura do móvel"
+    >
+      {seating ? (
+        <>
+          <rect
+            x="24"
+            y="37"
+            width="48"
+            height="8"
+            rx="3"
+            fill="#c79d73"
+            stroke="#76583c"
+            strokeWidth="2"
+          />
+          <rect
+            x="29"
+            y="19"
+            width="38"
+            height="22"
+            rx="8"
+            fill="#d4b28a"
+            stroke="#76583c"
+            strokeWidth="2"
+          />
+          {[28, 66, 63, 71].map((x, index) => (
+            <rect key={`${x}-${index}`} x={x} y="44" width="5" height="24" rx="2" fill="#76583c" />
+          ))}
+        </>
+      ) : table ? (
+        <>
+          <ellipse
+            cx="48"
+            cy="22"
+            rx={type === "mesa-redonda" ? 28 : 34}
+            ry="12"
+            fill="#d4b28a"
+            stroke="#76583c"
+            strokeWidth="2"
+          />
+          <rect x="42" y="31" width="12" height="31" rx="4" fill="#76583c" />
+          <path d="M20 64h56" stroke="#76583c" strokeWidth="4" strokeLinecap="round" />
+        </>
+      ) : sideboard ? (
+        <>
+          <ellipse
+            cx="48"
+            cy="18"
+            rx="34"
+            ry="10"
+            fill="#d4b28a"
+            stroke="#76583c"
+            strokeWidth="2"
+          />
+          <rect
+            x="18"
+            y="29"
+            width="60"
+            height="22"
+            rx="5"
+            fill="#c79d73"
+            stroke="#76583c"
+            strokeWidth="2"
+          />
+          <path
+            d="M27 55l-5 12M69 55l5 12"
+            stroke="#76583c"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <line x1="27" y1="45" x2="69" y2="45" stroke="#f4e9d9" strokeWidth="2" />
+        </>
+      ) : (
+        <Thumbnail width={120} height={100} doors={0} shelves={2} drawers={2} />
+      )}
+    </svg>
+  );
+}
+
+function hasDistinctGeometry(def: (typeof FURNITURE_TYPES)[number]) {
+  const type = def.baseType ?? def.id;
+  return [
+    "mesa",
+    "mesa-jantar",
+    "mesa-redonda",
+    "mesa-oval",
+    "mesa-organica",
+    "cadeira",
+    "banco",
+    "banqueta",
+    "aparador-organico",
+  ].includes(type);
+}
+
 export function CatalogBrowser({
   c,
   onMessage,
@@ -255,13 +359,17 @@ export function CatalogBrowser({
                   className={`rounded-xl border p-2 ${c.config.type === def.id ? "border-primary bg-secondary" : "border-border bg-card"}`}
                 >
                   <div className="flex items-center gap-2">
-                    <Thumbnail
-                      width={dimensions.width ?? 120}
-                      height={dimensions.height ?? 100}
-                      doors={dimensions.doors ?? 0}
-                      shelves={dimensions.shelves ?? 0}
-                      drawers={dimensions.drawers ?? 0}
-                    />
+                    {hasDistinctGeometry(def) ? (
+                      <DistinctThumbnail type={(def.baseType ?? def.id) as FurnitureType} />
+                    ) : (
+                      <Thumbnail
+                        width={dimensions.width ?? 120}
+                        height={dimensions.height ?? 100}
+                        doors={dimensions.doors ?? 0}
+                        shelves={dimensions.shelves ?? 0}
+                        drawers={dimensions.drawers ?? 0}
+                      />
+                    )}
                     <span className="min-w-0 text-xs">
                       <strong className="block truncate text-sm">{def.label}</strong>
                       <span className="block text-muted-foreground">
